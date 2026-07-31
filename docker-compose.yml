@@ -1,4 +1,27 @@
 services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: rikkei-web
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://rikkei@postgres:5432/rikkei_docs
+      AUTH_SECRET: dev_secret_change_in_production_min_32_chars_long
+      NEXTAUTH_URL: http://localhost:3000
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/web/.next
+    command: npm run dev --workspace=apps/web
+
   postgres:
     image: postgres:16-alpine
     container_name: rikkei-postgres
