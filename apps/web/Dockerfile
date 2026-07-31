@@ -10,6 +10,9 @@ COPY apps/web/package*.json ./apps/web/
 # Install dependencies inside container
 RUN npm install
 
+# Generate Prisma client for Linux (required for Docker environment)
+RUN npx prisma generate
+
 EXPOSE 3000
 
 ENV NODE_ENV=development
