@@ -3,10 +3,20 @@ services:
     image: postgres:16-alpine
     container_name: rikkei-postgres
     restart: unless-stopped
+    # NOTE for internal-only deployment (<50 users): trust auth on local network.
+    # The DB is only exposed to the host network (no public exposure).
+    # For production-grade hardening, switch to scram-sha-256 + strong password.
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-rikkei}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rikkei_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-rikkei_docs}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+      - "-c"
+      - "password_encryption=md5"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro

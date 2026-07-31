@@ -163,15 +163,41 @@ cd apps/web && npm run typecheck
 
 ## Current State — Plan 1 (Foundation)
 
-**Status**: SPEC APPROVED, writing plan file
-**Goal**: App Next.js chạy được với login, có PostgreSQL qua Docker, Rikkei Education theme.
+**Status**: PARTIALLY COMPLETE (5/16 tasks done, Task 6 stuck)
+**Completed**: Task 1-5 (git init, package.json, docker-compose, env validation, Next.js scaffold, auth helpers, Prisma schema.prisma)
+**Blocked**: Task 6 (Prisma migration) — Postgres auth issue
 
-**Critical files** (theo spec section 14):
-1. `docker-compose.yml`
-2. `package.json` (root workspaces)
-3. `apps/web/prisma/schema.prisma`
-4. `apps/web/lib/auth.ts`
-5. `apps/web/app/globals.css` (Rikkei theme tokens)
+### Known Issue: Postgres SCRAM-SHA-256 Authentication
+
+**Problem**: Khi chạy `prisma migrate dev` từ host, kết nối tới Postgres trong Docker bị fail với `password authentication failed for user "rikkei"`. Ngay cả khi:
+- pg_hba.conf đã có trust rule cho 0.0.0.0/0.
+- Password `rikkei_dev_password` đúng.
+- pg client và Prisma đều fail.
+
+**Root cause chưa xác định** — pg client v3+ dùng SCRAM-SHA-256, luôn gửi empty password khi test không có password, gây SASL error. Với password explicit, server vẫn fail.
+
+**Workarounds đã thử (đều fail)**:
+- `docker compose down -v` + recreate.
+- `POSTGRES_HOST_AUTH_METHOD=trust` env.
+- `POSTGRES_INITDB_ARGS=--auth-host=md5`.
+- Edit `pg_hba.conf` thêm trust rule cho 0.0.0.0/0.
+- `pg_reload_conf()` sau khi edit pg_hba.conf.
+- `docker restart rikkei-postgres`.
+
+**Workarounds khả thi để user thử**:
+1. **Kết nối qua Docker network** (chạy Prisma trong container):
+   ```bash
+   docker run --rm --network web-noi-bo_default -e DATABASE_URL='postgresql://rikkei:rikkei_dev_password@postgres:5432/rikkei_docs' -v $(pwd):/app -w /app/apps/web node:24-alpine sh -c "npm install prisma && npx prisma migrate dev"
+   ```
+2. **Dùng `prisma db push` thay vì migrate** (bypass migration history).
+3. **Dùng psql trực tiếp để chạy SQL thủ công** rồi generate Prisma client:
+   ```bash
+   docker exec rikkei-postgres psql -U rikkei -d rikkei_docs -c "$(cat createdb.sql)"
+   npx prisma generate
+   ```
+4. **Cài psql client trên Windows host** rồi debug bằng cách kết nối trực tiếp xem auth resp chi tiết.
+
+**Spec confirmed**: `docs/superpowers/plans/01-foundation.md` Plan 1 file có đầy đủ 16 tasks với code, có thể tiếp tục khi fix được Postgres.
 
 ---
 
