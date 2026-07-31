@@ -1,0 +1,28 @@
+{
+  "name": "rikkei-edu-web-noi-bo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web nội bộ quản lý tài liệu quy trình - Rikkei Education",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "db:migrate": "npm run db:migrate --workspace=apps/web",
+    "db:seed": "npm run db:seed --workspace=apps/web",
+    "db:studio": "npm run db:studio --workspace=apps/web"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.0.0"
+  }
+}
