@@ -1,0 +1,9 @@
+node_modules
+.git
+.claude
+docs
+.env
+.env.*
+*.log
+.next
+dist

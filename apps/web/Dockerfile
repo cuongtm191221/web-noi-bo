@@ -1,15 +1,13 @@
 # Dockerfile for Next.js web app in development
-# Note: Source is mounted via volumes from docker-compose.yml for hot reload
-
 FROM node:24-alpine
 
 WORKDIR /app
 
-# Install all npm dependencies (workspace root + apps/web)
-# The source code is mounted via volumes, but node_modules must be inside the container
+# Copy package files only (dockerignore excludes everything else)
 COPY package*.json ./
 COPY apps/web/package*.json ./apps/web/
 
+# Install dependencies inside container
 RUN npm install
 
 EXPOSE 3000
