@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rikkei-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rikkei}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rikkei_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-rikkei_docs}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rikkei} -d ${POSTGRES_DB:-rikkei_docs}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Placeholder for future plans
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rikkei-ollama
+    profiles: ["ai"]  # Only start when --profile ai
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+
+  ai-pipeline:
+    build:
+      context: ./apps/ai-pipeline
+    container_name: rikkei-ai-pipeline
+    profiles: ["ai"]
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_started
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    ports:
+      - "${AI_PIPELINE_PORT:-8000}:8000"
+
+  mcp-server:
+    build:
+      context: ./apps/mcp-server
+    container_name: rikkei-mcp-server
+    profiles: ["mcp"]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rikkei}:${POSTGRES_PASSWORD:-rikkei_dev_password}@postgres:5432/${POSTGRES_DB:-rikkei_docs}
+      MCP_API_KEY: ${MCP_API_KEY:-changeme_mcp_api_key}
+    ports:
+      - "${MCP_PORT:-8765}:8765"
+
+volumes:
+  postgres_data:
+    name: rikkei_postgres_data
+  ollama_data:
+    name: rikkei_ollama_data
