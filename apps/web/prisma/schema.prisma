@@ -14,6 +14,21 @@ enum Role {
   viewer
 }
 
+enum DocumentStatus {
+  draft
+  published
+  archived
+}
+
+enum DocumentFormat {
+  pdf
+  docx
+  xlsx
+  pptx
+  md
+  txt
+}
+
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
@@ -22,6 +37,7 @@ model User {
   role          Role     @default(viewer)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
+  documents     Document[]
 
   @@map("users")
 }
@@ -34,6 +50,31 @@ model Category {
   parent    Category?  @relation("CategoryToParent", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryToParent")
   createdAt DateTime @default(now()) @map("created_at")
+  documents Document[]
 
   @@map("categories")
+}
+
+model Document {
+  id          String         @id @default(cuid())
+  title       String
+  filename    String         @unique
+  format      DocumentFormat
+  mimeType   String         @map("mime_type")
+  sizeBytes   Int            @map("size_bytes")
+  storagePath String         @map("storage_path")
+  status      DocumentStatus @default(draft)
+  uploaderId  String         @map("uploader_id")
+  uploader    User           @relation(fields: [uploaderId], references: [id])
+  categoryId  String?        @map("category_id")
+  category    Category?       @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@index([uploaderId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([createdAt])
+
+  @@map("documents")
 }
