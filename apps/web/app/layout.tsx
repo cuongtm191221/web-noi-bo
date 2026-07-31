@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { TRPCProvider } from '@/lib/trpc/client';
 
 export const metadata: Metadata = {
   title: 'Rikkei Education - Hệ thống quản lý tài liệu',
@@ -13,7 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body>{children}</body>
+      <body>
+        <TRPCProvider>{children}</TRPCProvider>
+      </body>
     </html>
   );
 }
