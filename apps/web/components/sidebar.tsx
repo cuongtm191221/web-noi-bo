@@ -7,7 +7,7 @@ import type { Session } from 'next-auth';
 type NavItem = {
   href: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   roles: Array<'admin' | 'editor' | 'viewer'>;
 };
 
