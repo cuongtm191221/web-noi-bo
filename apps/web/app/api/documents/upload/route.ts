@@ -5,7 +5,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { validateFileSize, validateFileType } from '@/lib/document-helpers';
 
-const UPLOADS_DIR = path.join(process.cwd(), 'apps', 'web', 'uploads');
+const UPLOADS_DIR = process.env.UPLOADS_DIR ?? path.join(process.cwd(), 'apps', 'web', 'uploads');
 
 export async function POST(request: NextRequest) {
   const session = await auth();

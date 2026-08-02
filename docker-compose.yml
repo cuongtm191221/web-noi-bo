@@ -14,6 +14,7 @@ services:
       AUTH_SECRET: dev_secret_change_in_production_min_32_chars_long
       NEXTAUTH_URL: http://localhost:3000
       AI_PIPELINE_URL: http://ai-pipeline:8000
+      UPLOADS_DIR: /uploads
     ports:
       - "${WEB_PORT:-3000}:3000"
     volumes:
@@ -21,6 +22,7 @@ services:
       - /app/node_modules
       - /app/apps/web/node_modules
       - /app/apps/web/.next
+      - uploads_data:/uploads
     # Volumes override node_modules, so regenerate Prisma client at startup
     command: sh -c "npx prisma generate --schema=./apps/web/prisma/schema.prisma && npm run dev --workspace=apps/web"
 
@@ -53,16 +55,17 @@ services:
       timeout: 5s
       retries: 5
 
-  # Placeholder for future plans
   ollama:
     image: ollama/ollama:latest
     container_name: rikkei-ollama
-    profiles: ["ai"]  # Only start when --profile ai
+    profiles: ["ai"]
     restart: unless-stopped
     volumes:
       - ollama_data:/root/.ollama
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
+    environment:
+      - OLLAMA_NUM_CTX=8192
 
   ai-pipeline:
     build:
@@ -80,8 +83,11 @@ services:
       OLLAMA_MODEL: qwen2.5:7b
       DATABASE_URL: postgresql://rikkei@postgres:5432/rikkei_docs
       STORAGE_URL: http://web:3000
+      UPLOADS_DIR: /uploads
     ports:
       - "${AI_PIPELINE_PORT:-8000}:8000"
+    volumes:
+      - uploads_data:/uploads
 
   mcp-server:
     build:
@@ -103,3 +109,5 @@ volumes:
     name: rikkei_postgres_data
   ollama_data:
     name: rikkei_ollama_data
+  uploads_data:
+    name: rikkei_uploads_data

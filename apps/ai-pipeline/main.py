@@ -20,6 +20,7 @@ app = FastAPI(title="Rikkei AI Pipeline", version="0.1.0")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://ollama:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
 STORAGE_URL = os.environ.get("STORAGE_URL", "http://web:3000")
+UPLOADS_DIR = os.environ.get("UPLOADS_DIR", "/uploads")
 
 PARSER_MAP = {
     "pdf": parse_pdf,
@@ -60,13 +61,14 @@ async def process_document(req: ProcessRequest, background_tasks: BackgroundTask
 async def _process_pipeline(document_id: str, storage_path: str, format: str):
     """The actual AI pipeline."""
     try:
-        # 1. Download file from Next.js storage
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.get(
-                f"{STORAGE_URL}/api/documents/{document_id}/download",
-            )
-            response.raise_for_status()
-            file_bytes = response.content
+        # 1. Read file from shared volume
+        # storage_path is the full path like /uploads/{id}.{ext}
+        # Use just the basename to find it in UPLOADS_DIR
+        import os
+        filename = os.path.basename(storage_path)
+        file_path = os.path.join(UPLOADS_DIR, filename)
+        with open(file_path, "rb") as f:
+            file_bytes = f.read()
 
         # 2. Parse
         parser = PARSER_MAP[format]
