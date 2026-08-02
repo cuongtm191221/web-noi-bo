@@ -100,9 +100,9 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-rikkei}:${POSTGRES_PASSWORD:-rikkei_dev_password}@postgres:5432/${POSTGRES_DB:-rikkei_docs}
-      MCP_API_KEY: ${MCP_API_KEY:-changeme_mcp_api_key}
-    ports:
-      - "${MCP_PORT:-8765}:8765"
+      MCP_API_KEY: ${MCP_API_KEY:-dev_mcp_api_key_change_in_prod}
+    stdin_open: true
+    tty: true
 
 volumes:
   postgres_data:
