@@ -71,10 +71,72 @@ model Document {
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
 
+  summary    DocumentSummary?
+  flowchart  DocumentFlowchart?
+  chunks     DocumentChunk[]
+  citations  Citation[]
+
   @@index([uploaderId])
   @@index([categoryId])
   @@index([status])
   @@index([createdAt])
 
   @@map("documents")
+}
+
+model DocumentSummary {
+  id                String   @id @default(cuid())
+  documentId        String   @unique @map("document_id")
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  executiveSummary  String   @db.Text @map("executive_summary")
+  checklist         Json
+  modelUsed         String   @map("model_used")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("document_summaries")
+}
+
+model DocumentFlowchart {
+  id           String   @id @default(cuid())
+  documentId   String   @unique @map("document_id")
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  mermaidSyntax String  @db.Text @map("mermaid_syntax")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("document_flowcharts")
+}
+
+model DocumentChunk {
+  id          String   @id @default(cuid())
+  documentId  String   @map("document_id")
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex  Int      @map("chunk_index")
+  text        String   @db.Text
+  pageNumber  Int?     @map("page_number")
+  slideNumber Int?     @map("slide_number")
+  sheetName   String?  @map("sheet_name")
+  rowNumber   Int?     @map("row_number")
+  tokenCount  Int      @map("token_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([documentId])
+  @@map("document_chunks")
+}
+
+model Citation {
+  id           String   @id @default(cuid())
+  documentId   String   @map("document_id")
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkId      String   @map("chunk_id")
+  claimText    String   @db.Text @map("claim_text")
+  pageNumber   Int?     @map("page_number")
+  slideNumber  Int?     @map("slide_number")
+  sheetName    String?  @map("sheet_name")
+  rowNumber    Int?     @map("row_number")
+  columnLetter String?  @map("column_letter")
+  order        Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([documentId])
+  @@map("citations")
 }
