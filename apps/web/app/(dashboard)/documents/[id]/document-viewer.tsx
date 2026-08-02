@@ -5,9 +5,11 @@ import { ProcessingStatus } from './processing-status';
 import { SummaryTab } from './summary-tab';
 import { FlowchartTab } from './flowchart-tab';
 import { CitationTab } from './citation-tab';
+import { DocumentContent } from './document-content';
 
 type Props = {
   documentId: string;
+  format: 'pdf' | 'docx' | 'pptx' | 'xlsx' | 'md' | 'txt';
   hasSummary: boolean;
   hasFlowchart: boolean;
   hasCitations: boolean;
@@ -15,16 +17,22 @@ type Props = {
 
 type Tab = 'viewer' | 'summary' | 'flowchart' | 'citation';
 
-export function DocumentViewer({ documentId, hasSummary, hasFlowchart, hasCitations }: Props) {
+export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, hasCitations }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('viewer');
   const [status, setStatus] = useState({
     hasSummary,
     hasFlowchart,
     hasCitations,
   });
+  const [highlightPage, setHighlightPage] = useState<number | undefined>(undefined);
 
   const handleStatusUpdate = useCallback((s: { hasSummary: boolean; hasFlowchart: boolean; hasCitations: boolean }) => {
     setStatus(s);
+  }, []);
+
+  const handleCitationClick = useCallback((page: number | undefined) => {
+    setHighlightPage(page);
+    setActiveTab('viewer');
   }, []);
 
   const tabStyle = (isActive: boolean, isDisabled: boolean) => ({
@@ -103,20 +111,15 @@ export function DocumentViewer({ documentId, hasSummary, hasFlowchart, hasCitati
       )}
 
       {activeTab === 'citation' && status.hasCitations && (
-        <CitationTab documentId={documentId} />
+        <CitationTab documentId={documentId} onCitationClick={handleCitationClick} />
       )}
 
       {activeTab === 'viewer' && (
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          padding: '32px',
-          textAlign: 'center',
-          color: 'var(--color-text-muted)',
-        }}>
-          <p>Document viewer (Plan 6)</p>
-        </div>
+        <DocumentContent
+          documentId={documentId}
+          format={format}
+          highlightPage={highlightPage}
+        />
       )}
 
       {activeTab === 'summary' && !status.hasSummary && (

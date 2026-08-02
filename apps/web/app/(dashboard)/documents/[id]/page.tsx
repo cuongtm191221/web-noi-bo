@@ -84,6 +84,7 @@ export default async function DocumentViewerPage({
 
       <DocumentViewer
         documentId={doc.id}
+        format={doc.format as 'pdf' | 'docx' | 'pptx' | 'xlsx' | 'md' | 'txt'}
         hasSummary={!!doc.summary}
         hasFlowchart={!!doc.flowchart}
         hasCitations={false}

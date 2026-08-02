@@ -5,6 +5,7 @@ import { trpc } from '@/lib/trpc/client';
 
 type Props = {
   documentId: string;
+  onCitationClick: (page: number | undefined) => void;
 };
 
 function formatLocation(cit: {
@@ -26,17 +27,16 @@ function formatLocation(cit: {
   return '[không xác định]';
 }
 
-export function CitationTab({ documentId }: Props) {
+export function CitationTab({ documentId, onCitationClick }: Props) {
   const { data, isLoading, error } = trpc.documents.getCitations.useQuery({
     id: documentId,
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const handleClick = (id: string) => {
+  const handleClick = (id: string, pageNumber: number | null) => {
     setSelectedId(id);
-    // TODO Plan 6: scroll PDF viewer + highlight chunk
-    console.log('Citation clicked:', id);
+    onCitationClick(pageNumber ?? undefined);
   };
 
   if (isLoading) {
@@ -101,7 +101,7 @@ export function CitationTab({ documentId }: Props) {
           return (
             <div
               key={cit.id}
-              onClick={() => handleClick(cit.id)}
+              onClick={() => handleClick(cit.id, cit.pageNumber)}
               style={{
                 padding: '16px',
                 borderRadius: '8px',
