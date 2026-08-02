@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronLeft, Download } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { DocumentStatusBadge } from '@/components/document-status-badge';
@@ -87,20 +87,6 @@ export default async function DocumentViewerPage({
         hasSummary={!!doc.summary}
         hasFlowchart={!!doc.flowchart}
       />
-
-      {/* Hidden download link (kept for backwards compat) */}
-      {false && (
-        <a
-          href={`/api/documents/${doc.id}/download`}
-          style={{
-            color: 'var(--color-rikkei-blue)',
-            fontSize: '14px',
-          }}
-        >
-          <Download style={{ width: '48px', height: '48px' }} />
-          Tải file về máy
-        </a>
-      )}
     </div>
   );
 }
