@@ -5,6 +5,28 @@ import { createTRPCRouter, protectedProcedure } from '../server';
 import { prisma } from '@/lib/prisma';
 
 export const documentsRouter = createTRPCRouter({
+  processingStatus: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      const doc = await prisma.document.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          status: true,
+          summary: { select: { id: true, createdAt: true } },
+          flowchart: { select: { id: true, createdAt: true } },
+          _count: { select: { chunks: true, citations: true } },
+        },
+      });
+      if (!doc) throw new TRPCError({ code: 'NOT_FOUND' });
+      return {
+        status: doc.status,
+        hasSummary: !!doc.summary,
+        hasFlowchart: !!doc.flowchart,
+        chunkCount: doc._count.chunks,
+        citationCount: doc._count.citations,
+      };
+    }),
   list: protectedProcedure
     .input(z.object({
       status: z.enum(['draft', 'published', 'archived']).optional(),
