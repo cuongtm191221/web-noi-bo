@@ -94,20 +94,29 @@ async def save_citations(document_id: str, citations: List[Dict[str, Any]]) -> N
             "DELETE FROM citations WHERE document_id = $1",
             document_id,
         )
-        # Get chunk IDs by index
+        # Get chunk IDs by index + location
         chunk_rows = await conn.fetch(
-            "SELECT id, chunk_index FROM document_chunks WHERE document_id = $1 ORDER BY chunk_index",
+            """
+            SELECT id, chunk_index, page_number, slide_number, sheet_name, row_number
+            FROM document_chunks WHERE document_id = $1 ORDER BY chunk_index
+            """,
             document_id,
         )
-        chunk_index_to_id = {
-            row["chunk_index"]: row["id"] for row in chunk_rows
+        chunk_index_to_info = {
+            row["chunk_index"]: dict(row) for row in chunk_rows
         }
 
         for idx, cit in enumerate(citations):
             chunk_index = cit.get("chunk_index", 0)
-            chunk_id = chunk_index_to_id.get(chunk_index)
-            if not chunk_id:
+            chunk_info = chunk_index_to_info.get(chunk_index)
+            if not chunk_info:
                 continue
+            chunk_id = chunk_info["id"]
+            # Inherit location from chunk if not in citation
+            page_number = cit.get("page_number") or chunk_info["page_number"]
+            slide_number = cit.get("slide_number") or chunk_info["slide_number"]
+            sheet_name = cit.get("sheet_name") or chunk_info["sheet_name"]
+            row_number = cit.get("row_number") or chunk_info["row_number"]
             await conn.execute(
                 """
                 INSERT INTO citations
@@ -119,10 +128,10 @@ async def save_citations(document_id: str, citations: List[Dict[str, Any]]) -> N
                 document_id,
                 chunk_id,
                 cit.get("claim", ""),
-                cit.get("page_number"),
-                cit.get("slide_number"),
-                cit.get("sheet_name"),
-                cit.get("row_number"),
+                page_number,
+                slide_number,
+                sheet_name,
+                row_number,
                 cit.get("column_letter"),
                 idx,
             )
