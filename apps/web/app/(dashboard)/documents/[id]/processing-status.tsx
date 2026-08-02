@@ -7,13 +7,15 @@ type Props = {
   documentId: string;
   initialHasSummary: boolean;
   initialHasFlowchart: boolean;
-  onUpdate: (s: { hasSummary: boolean; hasFlowchart: boolean; isProcessing: boolean }) => void;
+  initialHasCitations: boolean;
+  onUpdate: (s: { hasSummary: boolean; hasFlowchart: boolean; hasCitations: boolean }) => void;
 };
 
 export function ProcessingStatus({
   documentId,
   initialHasSummary,
   initialHasFlowchart,
+  initialHasCitations,
   onUpdate,
 }: Props) {
   const isProcessing = !initialHasSummary || !initialHasFlowchart;
@@ -32,7 +34,7 @@ export function ProcessingStatus({
       onUpdate({
         hasSummary: data.hasSummary,
         hasFlowchart: data.hasFlowchart,
-        isProcessing: !data.hasSummary || !data.hasFlowchart,
+        hasCitations: data.citationCount > 0,
       });
     }
   }, [data, onUpdate]);

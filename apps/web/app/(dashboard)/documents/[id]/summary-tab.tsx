@@ -1,11 +1,50 @@
 'use client';
 
+import React, { ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { trpc } from '@/lib/trpc/client';
 
 type Props = {
   documentId: string;
 };
+
+// Match [1], [2], etc. and render as superscript badge
+function enrichCitations(children: ReactNode): ReactNode {
+  if (typeof children === 'string') {
+    const parts = children.split(/(\[\d+\])/g);
+    return parts.map((part, idx) => {
+      const match = part.match(/^\[(\d+)\]$/);
+      if (match) {
+        const num = match[1];
+        return (
+          <sup
+            key={idx}
+            style={{
+              display: 'inline-block',
+              minWidth: '20px',
+              padding: '0 4px',
+              margin: '0 2px',
+              borderRadius: '9999px',
+              backgroundColor: 'var(--color-primary)',
+              color: 'white',
+              fontSize: '10px',
+              fontWeight: 700,
+              lineHeight: '16px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              verticalAlign: 'super',
+            }}
+            title={`Trích dẫn #${num}`}
+          >
+            {num}
+          </sup>
+        );
+      }
+      return part;
+    });
+  }
+  return children;
+}
 
 export function SummaryTab({ documentId }: Props) {
   const { data, isLoading, error } = trpc.documents.getSummary.useQuery({
@@ -70,7 +109,17 @@ export function SummaryTab({ documentId }: Props) {
         Tóm tắt
       </h2>
       <div style={{ fontSize: '15px', lineHeight: '1.6', marginBottom: '24px', color: 'var(--color-text-dark)' }}>
-        <ReactMarkdown>{data.summary.executiveSummary}</ReactMarkdown>
+        <ReactMarkdown
+          components={{
+            p: ({ children, ...props }) => (
+              <p {...props} style={{ marginBottom: '12px' }}>
+                {enrichCitations(children)}
+              </p>
+            ),
+          }}
+        >
+          {data.summary.executiveSummary}
+        </ReactMarkdown>
       </div>
 
       {checklist.length > 0 && (

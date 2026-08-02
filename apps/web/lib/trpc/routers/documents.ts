@@ -27,6 +27,26 @@ export const documentsRouter = createTRPCRouter({
         citationCount: doc._count.citations,
       };
     }),
+  getCitations: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      const citations = await prisma.citation.findMany({
+        where: { documentId: input.id },
+        orderBy: { order: 'asc' },
+        select: {
+          id: true,
+          claimText: true,
+          pageNumber: true,
+          slideNumber: true,
+          sheetName: true,
+          rowNumber: true,
+          columnLetter: true,
+          order: true,
+          chunkId: true,
+        },
+      });
+      return citations;
+    }),
   getSummary: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {

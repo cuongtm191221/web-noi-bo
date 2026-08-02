@@ -86,6 +86,7 @@ export default async function DocumentViewerPage({
         documentId={doc.id}
         hasSummary={!!doc.summary}
         hasFlowchart={!!doc.flowchart}
+        hasCitations={false}
       />
     </div>
   );
