@@ -14,9 +14,24 @@ Hãy tóm tắt nội dung sau thành JSON với format:
   "executive_summary": "Tóm tắt tổng quan (2-3 câu)",
   "checklist": ["Bước 1", "Bước 2", ...],
   "citations": [
-    {{"claim": "Trích dẫn tuyên bố", "chunk_index": 0}}
+    {{
+      "claim": "Trích dẫn tuyên bố cụ thể từ tài liệu",
+      "chunk_index": 0,
+      "page_number": 1,
+      "slide_number": null,
+      "sheet_name": null,
+      "row_number": null,
+      "column_letter": null
+    }}
   ]
 }}
+
+QUAN TRỌNG - trường location:
+- Nếu chunk thuộc PDF/DOCX: điền "page_number" (số nguyên) — dựa trên metadata trong "[Chunk N]: ..."
+- Nếu chunk thuộc PPTX: điền "slide_number"
+- Nếu chunk thuộc XLSX: điền "sheet_name", "row_number", "column_letter" (nếu biết)
+- Các trường khác để null
+- MỖI citation PHẢI có ít nhất 1 location field đầy đủ
 
 CHÚ Ý: Output CHÍNH XÁC là JSON, không có text nào khác.
 
