@@ -75,8 +75,10 @@ async def _process_pipeline(document_id: str, storage_path: str, format: str):
         doc = parser(file_bytes)
 
         if doc.total_chars() == 0:
-            # Empty document - mark as archived
-            await update_document_status(document_id, "archived")
+            # Empty document (PDF scan without text layer) - keep as draft
+            # so user can manually retry or upload a different file
+            print(f"Document {document_id} has no extractable text (likely PDF scan)")
+            await update_document_status(document_id, "draft")
             return
 
         # 3. Chunk
