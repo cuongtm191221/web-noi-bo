@@ -15,7 +15,7 @@ Hãy tóm tắt nội dung sau thành JSON với format:
   "checklist": ["Bước 1", "Bước 2", ...],
   "citations": [
     {{
-      "claim": "Trích dẫn tuyên bố cụ thể từ tài liệu",
+      "claim": "Tiêu đề/Heading hoặc điều khoản quan trọng",
       "chunk_index": 0,
       "page_number": 1,
       "slide_number": null,
@@ -25,6 +25,13 @@ Hãy tóm tắt nội dung sau thành JSON với format:
     }}
   ]
 }}
+
+QUAN TRỌNG - citations phải là HEADINGS / ĐIỀU KHOẢN, không phải câu ngẫu nhiên:
+- Mỗi citation = 1 tiêu đề mục lớn (Điều 1, Chương I, Mục A) HOẶC điều khoản quan trọng
+- KHÔNG trích ngẫu nhiên 1 câu bất kỳ trong bài
+- Ưu tiên: cấu trúc phân cấp (Điều > Khoản > Điểm), quy trình (Bước 1, 2, 3), quy tắc (Nguyên tắc, Quy định)
+- Format "claim" ngắn gọn, đại diện cho cả phần (5-15 từ)
+- 3-8 citations tổng cộng
 
 QUAN TRỌNG - trường location:
 - Nếu chunk thuộc PDF/DOCX: điền "page_number" (số nguyên) — dựa trên metadata trong "[Chunk N]: ..."
