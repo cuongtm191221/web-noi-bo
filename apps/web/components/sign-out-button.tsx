@@ -6,7 +6,14 @@ export function SignOutButton() {
   return (
     <button
       onClick={() => signOut({ callbackUrl: '/login' })}
-      className="text-sm text-text-muted hover:text-primary transition-colors"
+      style={{
+        fontSize: '14px',
+        color: 'var(--color-text-muted)',
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+      }}
     >
       Đăng xuất
     </button>

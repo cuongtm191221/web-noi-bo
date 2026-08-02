@@ -35,20 +35,37 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-cream px-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-md p-8">
-        <div className="flex justify-center mb-8">
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'var(--color-bg-cream)',
+      padding: '16px',
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '448px',
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+        padding: '32px',
+        border: '1px solid var(--color-border)',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px' }}>
           <Logo />
         </div>
 
-        <h1 className="text-2xl font-bold text-primary mb-2">Đăng nhập</h1>
-        <p className="text-sm text-text-muted mb-6">
+        <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '8px' }}>
+          Đăng nhập
+        </h1>
+        <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '24px' }}>
           Hệ thống quản lý tài liệu nội bộ Rikkei Education
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label htmlFor="email" className="block text-sm font-semibold mb-1">
+            <label htmlFor="email" style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
               Email
             </label>
             <input
@@ -57,13 +74,20 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-[#005c9e]"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid var(--color-border)',
+                outline: 'none',
+                fontSize: '14px',
+              }}
               placeholder="admin@rikkei.edu.vn"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-semibold mb-1">
+            <label htmlFor="password" style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
               Mật khẩu
             </label>
             <input
@@ -72,13 +96,26 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-[#005c9e]"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid var(--color-border)',
+                outline: 'none',
+                fontSize: '14px',
+              }}
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">
+            <div style={{
+              fontSize: '14px',
+              color: '#dc2626',
+              backgroundColor: '#fef2f2',
+              padding: '8px 12px',
+              borderRadius: '6px',
+            }}>
               {error}
             </div>
           )}
@@ -86,13 +123,24 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isPending}
-            className="w-full bg-primary hover:bg-primary-hover text-white font-semibold py-2 px-4 rounded-md transition-all disabled:opacity-50"
+            style={{
+              width: '100%',
+              fontWeight: '600',
+              padding: '10px 16px',
+              borderRadius: '6px',
+              backgroundColor: 'var(--color-primary)',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '14px',
+              opacity: isPending ? 0.5 : 1,
+            }}
           >
             {isPending ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
 
-        <p className="text-xs text-text-muted mt-6 text-center">
+        <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '24px', textAlign: 'center' }}>
           Liên hệ admin để được cấp tài khoản
         </p>
       </div>

@@ -2,16 +2,16 @@ import Image from 'next/image';
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-2 ${className ?? ''}`}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className={className}>
       <Image
         src="/rikkei-logo.svg"
         alt="Rikkei Education"
         width={40}
         height={40}
-        className="h-10 w-auto"
+        style={{ height: '40px', width: 'auto' }}
         priority
       />
-      <span className="font-bold text-lg text-primary">Rikkei Education</span>
+      <span style={{ fontWeight: 700, fontSize: '18px', color: 'var(--color-primary)' }}>Rikkei Education</span>
     </div>
   );
 }

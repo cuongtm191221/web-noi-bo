@@ -17,13 +17,11 @@ export function UploadButton() {
   const handleFile = async (file: File) => {
     setError(null);
 
-    // Client-side size check
     if (file.size > 50 * 1024 * 1024) {
       setError('File quá lớn (>50MB).');
       return;
     }
 
-    // Use filename as title (user can edit later)
     const title = file.name.replace(/\.[^.]+$/, '');
 
     const formData = new FormData();
@@ -52,12 +50,25 @@ export function UploadButton() {
         type="button"
         onClick={() => fileInputRef.current?.click()}
         disabled={isPending}
-        className="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white font-semibold px-4 py-2 rounded-md transition-all disabled:opacity-50"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          backgroundColor: 'var(--color-primary)',
+          color: 'white',
+          fontWeight: 600,
+          padding: '8px 16px',
+          borderRadius: '6px',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '14px',
+          opacity: isPending ? 0.5 : 1,
+        }}
       >
         {isPending ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
         ) : (
-          <Upload className="w-4 h-4" />
+          <Upload style={{ width: '16px', height: '16px' }} />
         )}
         Upload tài liệu
       </button>
@@ -66,16 +77,23 @@ export function UploadButton() {
         ref={fileInputRef}
         type="file"
         accept={ACCEPT_ATTR}
-        className="hidden"
+        style={{ display: 'none' }}
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleFile(file);
-          e.target.value = ''; // Allow re-selecting same file
+          e.target.value = '';
         }}
       />
 
       {error && (
-        <div className="mt-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">
+        <div style={{
+          marginTop: '8px',
+          fontSize: '14px',
+          color: '#dc2626',
+          backgroundColor: '#fef2f2',
+          padding: '8px 12px',
+          borderRadius: '6px',
+        }}>
           {error}
         </div>
       )}

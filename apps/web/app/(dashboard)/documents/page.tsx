@@ -30,60 +30,89 @@ export default async function DocumentsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '24px',
+      }}>
         <div>
-          <h1 className="text-3xl font-bold text-primary mb-2">Tài liệu</h1>
-          <p className="text-text-muted">Danh sách tài liệu quy trình và quy định</p>
+          <h1 style={{ fontSize: '30px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '8px' }}>
+            Tài liệu
+          </h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
+            Danh sách tài liệu quy trình và quy định
+          </p>
         </div>
         {canUpload && <UploadButton />}
       </div>
 
       {documents.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center text-text-muted">
-          <FileText className="w-12 h-12 mx-auto mb-3 text-border" />
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          padding: '32px',
+          textAlign: 'center',
+          color: 'var(--color-text-muted)',
+        }}>
+          <FileText style={{ width: '48px', height: '48px', margin: '0 auto 12px', color: 'var(--color-border)' }} />
           <p>Chưa có tài liệu nào. Hãy upload tài liệu đầu tiên.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-bg-cream">
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          overflow: 'hidden',
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ backgroundColor: 'var(--color-bg-cream)' }}>
               <tr>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-text-dark">Tên</th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-text-dark">Danh mục</th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-text-dark">Người upload</th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-text-dark">Trạng thái</th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-text-dark">Ngày tạo</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-dark)' }}>Tên</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-dark)' }}>Danh mục</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-dark)' }}>Người upload</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-dark)' }}>Trạng thái</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-dark)' }}>Ngày tạo</th>
               </tr>
             </thead>
             <tbody>
-              {documents.map((doc) => {
+              {documents.map((doc, idx) => {
                 const Icon = FORMAT_ICONS[doc.format];
                 return (
-                  <tr key={doc.id} className="border-t border-border hover:bg-bg-cream transition-colors">
-                    <td className="px-4 py-3">
+                  <tr key={doc.id} style={{
+                    borderTop: idx > 0 ? '1px solid var(--color-border)' : 'none',
+                  }}>
+                    <td style={{ padding: '12px 16px' }}>
                       <Link
                         href={`/documents/${doc.id}`}
-                        className="flex items-center gap-3 text-primary hover:underline"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          color: 'var(--color-primary)',
+                          textDecoration: 'none',
+                        }}
                       >
-                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        <Icon style={{ width: '16px', height: '16px', flexShrink: 0 }} />
                         <div>
-                          <div className="font-semibold">{doc.title}</div>
-                          <div className="text-xs text-text-muted">
+                          <div style={{ fontWeight: 600 }}>{doc.title}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
                             {doc.format.toUpperCase()} · {formatBytes(doc.sizeBytes)}
                           </div>
                         </div>
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-sm text-text-muted">
-                      {doc.category?.name ?? <span className="italic">Chưa phân loại</span>}
+                    <td style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--color-text-muted)' }}>
+                      {doc.category?.name ?? <em>Chưa phân loại</em>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-text-muted">
+                    <td style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--color-text-muted)' }}>
                       {doc.uploader.name}
                     </td>
-                    <td className="px-4 py-3">
+                    <td style={{ padding: '12px 16px' }}>
                       <DocumentStatusBadge status={doc.status} />
                     </td>
-                    <td className="px-4 py-3 text-sm text-text-muted">
+                    <td style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--color-text-muted)' }}>
                       {doc.createdAt.toLocaleDateString('vi-VN')}
                     </td>
                   </tr>

@@ -20,7 +20,8 @@ services:
       - /app/node_modules
       - /app/apps/web/node_modules
       - /app/apps/web/.next
-    command: npm run dev --workspace=apps/web
+    # Volumes override node_modules, so regenerate Prisma client at startup
+    command: sh -c "npx prisma generate --schema=./apps/web/prisma/schema.prisma && npm run dev --workspace=apps/web"
 
   postgres:
     image: postgres:16-alpine

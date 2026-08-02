@@ -7,11 +7,14 @@ WORKDIR /app
 COPY package*.json ./
 COPY apps/web/package*.json ./apps/web/
 
+# Copy prisma schema (needed for prisma generate)
+COPY apps/web/prisma ./apps/web/prisma
+
 # Install dependencies inside container
 RUN npm install
 
 # Generate Prisma client for Linux (required for Docker environment)
-RUN npx prisma generate
+RUN npx prisma generate --schema=./apps/web/prisma/schema.prisma
 
 EXPOSE 3000
 

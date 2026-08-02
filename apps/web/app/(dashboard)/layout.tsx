@@ -14,9 +14,9 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-bg-cream">
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-cream)' }}>
       <Sidebar session={session} />
-      <main className="ml-[270px] p-6">
+      <main style={{ marginLeft: '270px', padding: '24px' }}>
         {children}
       </main>
     </div>

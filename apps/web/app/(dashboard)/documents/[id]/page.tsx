@@ -27,17 +27,38 @@ export default async function DocumentViewerPage({
     <div>
       <Link
         href="/documents"
-        className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-primary mb-4"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          fontSize: '14px',
+          color: 'var(--color-text-muted)',
+          textDecoration: 'none',
+          marginBottom: '16px',
+        }}
       >
-        <ChevronLeft className="w-4 h-4" />
+        <ChevronLeft style={{ width: '16px', height: '16px' }} />
         Quay lại danh sách
       </Link>
 
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <div className="flex items-start justify-between mb-4">
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        padding: '24px',
+        marginBottom: '24px',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          marginBottom: '16px',
+        }}>
           <div>
-            <h1 className="text-3xl font-bold text-primary mb-2">{doc.title}</h1>
-            <div className="flex items-center gap-3 text-sm text-text-muted">
+            <h1 style={{ fontSize: '30px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '8px' }}>
+              {doc.title}
+            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: 'var(--color-text-muted)' }}>
               <span>{doc.format.toUpperCase()}</span>
               <span>·</span>
               <span>{(doc.sizeBytes / 1024).toFixed(1)} KB</span>
@@ -51,35 +72,79 @@ export default async function DocumentViewerPage({
         </div>
 
         {doc.category && (
-          <div className="text-sm">
-            <span className="text-text-muted">Danh mục: </span>
-            <span className="font-semibold">{doc.category.name}</span>
+          <div style={{ fontSize: '14px' }}>
+            <span style={{ color: 'var(--color-text-muted)' }}>Danh mục: </span>
+            <span style={{ fontWeight: 600 }}>{doc.category.name}</span>
           </div>
         )}
       </div>
 
       {/* Tabs placeholder */}
-      <div className="bg-white rounded-lg shadow-sm p-1 mb-6 inline-flex gap-1">
-        <button className="px-4 py-2 text-sm font-semibold rounded-md bg-primary text-white">
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        padding: '4px',
+        marginBottom: '24px',
+        display: 'inline-flex',
+        gap: '4px',
+      }}>
+        <button style={{
+          padding: '8px 16px',
+          fontSize: '14px',
+          fontWeight: 600,
+          borderRadius: '6px',
+          backgroundColor: 'var(--color-primary)',
+          color: 'white',
+          border: 'none',
+          cursor: 'pointer',
+        }}>
           Tài liệu
         </button>
         <button
           disabled
-          className="px-4 py-2 text-sm font-semibold rounded-md text-text-muted cursor-not-allowed"
+          style={{
+            padding: '8px 16px',
+            fontSize: '14px',
+            fontWeight: 600,
+            borderRadius: '6px',
+            color: 'var(--color-text-muted)',
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'not-allowed',
+          }}
           title="Sẽ có ở Plan 3"
         >
           Tóm tắt
         </button>
         <button
           disabled
-          className="px-4 py-2 text-sm font-semibold rounded-md text-text-muted cursor-not-allowed"
+          style={{
+            padding: '8px 16px',
+            fontSize: '14px',
+            fontWeight: 600,
+            borderRadius: '6px',
+            color: 'var(--color-text-muted)',
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'not-allowed',
+          }}
           title="Sẽ có ở Plan 4"
         >
           Sơ đồ
         </button>
         <button
           disabled
-          className="px-4 py-2 text-sm font-semibold rounded-md text-text-muted cursor-not-allowed"
+          style={{
+            padding: '8px 16px',
+            fontSize: '14px',
+            fontWeight: 600,
+            borderRadius: '6px',
+            color: 'var(--color-text-muted)',
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'not-allowed',
+          }}
           title="Sẽ có ở Plan 5"
         >
           Trích dẫn
@@ -87,14 +152,24 @@ export default async function DocumentViewerPage({
       </div>
 
       {/* Viewer placeholder */}
-      <div className="bg-white rounded-lg shadow-sm p-8 text-center text-text-muted">
-        <Download className="w-12 h-12 mx-auto mb-3 text-border" />
-        <p className="mb-4">
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        padding: '32px',
+        textAlign: 'center',
+        color: 'var(--color-text-muted)',
+      }}>
+        <Download style={{ width: '48px', height: '48px', margin: '0 auto 12px', color: 'var(--color-border)' }} />
+        <p style={{ marginBottom: '16px' }}>
           Viewer cho {doc.format.toUpperCase()} sẽ được implement ở Plan tiếp theo.
         </p>
         <a
           href={`/api/documents/${doc.id}/download`}
-          className="text-rikkei-blue hover:underline text-sm"
+          style={{
+            color: 'var(--color-rikkei-blue)',
+            fontSize: '14px',
+          }}
         >
           Tải file về máy
         </a>
