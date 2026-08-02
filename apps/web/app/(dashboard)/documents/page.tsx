@@ -110,7 +110,31 @@ export default async function DocumentsPage() {
                       {doc.uploader.name}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
-                      <DocumentStatusBadge status={doc.status} />
+                      {doc.status === 'draft' ? (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          backgroundColor: '#dbeafe',
+                          color: '#1e40af',
+                        }}>
+                          <span style={{
+                            display: 'inline-block',
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: '#1e40af',
+                            animation: 'pulse 1.5s ease-in-out infinite',
+                          }} />
+                          Đang xử lý AI...
+                        </span>
+                      ) : (
+                        <DocumentStatusBadge status={doc.status} />
+                      )}
                     </td>
                     <td style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--color-text-muted)' }}>
                       {doc.createdAt.toLocaleDateString('vi-VN')}

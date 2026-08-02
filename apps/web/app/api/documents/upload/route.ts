@@ -72,21 +72,19 @@ export async function POST(request: NextRequest) {
       data: { storagePath },
     });
 
-    // Trigger AI processing (fire-and-forget)
+    // Trigger AI processing (fire-and-forget, no await)
     const aiPipelineUrl = process.env.AI_PIPELINE_URL ?? 'http://ai-pipeline:8000';
-    try {
-      await fetch(`${aiPipelineUrl}/process`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          document_id: updated.id,
-          storage_path: updated.storagePath,
-          format: updated.format,
-        }),
-      });
-    } catch (err) {
+    void fetch(`${aiPipelineUrl}/process`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        document_id: updated.id,
+        storage_path: updated.storagePath,
+        format: updated.format,
+      }),
+    }).catch((err) => {
       console.warn('AI pipeline trigger failed (continuing):', err);
-    }
+    });
 
     return NextResponse.json({
       id: updated.id,

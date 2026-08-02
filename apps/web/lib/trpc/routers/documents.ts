@@ -27,6 +27,46 @@ export const documentsRouter = createTRPCRouter({
         citationCount: doc._count.citations,
       };
     }),
+  getSummary: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      const doc = await prisma.document.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          title: true,
+          summary: {
+            select: {
+              executiveSummary: true,
+              checklist: true,
+              modelUsed: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+      if (!doc) throw new TRPCError({ code: 'NOT_FOUND' });
+      return doc;
+    }),
+  getFlowchart: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      const doc = await prisma.document.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          title: true,
+          flowchart: {
+            select: {
+              mermaidSyntax: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+      if (!doc) throw new TRPCError({ code: 'NOT_FOUND' });
+      return doc;
+    }),
   list: protectedProcedure
     .input(z.object({
       status: z.enum(['draft', 'published', 'archived']).optional(),
