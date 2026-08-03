@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   },
   // Allow tRPC + Prisma
   serverExternalPackages: ['@prisma/client', 'bcryptjs'],
+  // Hide Next.js dev indicator (the "N" icon bottom-right) for cleaner UI
+  devIndicators: false,
 };
 
 export default nextConfig;
