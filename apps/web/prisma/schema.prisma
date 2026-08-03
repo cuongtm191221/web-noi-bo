@@ -16,8 +16,10 @@ enum Role {
 
 enum DocumentStatus {
   draft
+  parsing
   published
   archived
+  failed
 }
 
 enum DocumentFormat {
@@ -40,8 +42,41 @@ model User {
   deactivatedAt DateTime? @map("deactivated_at")
   documents     Document[]
   mcpTokens     McpToken[]
+  activities    Activity[]
+  notifications Notification[]
 
   @@map("users")
+}
+
+model Activity {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action     String   // UPLOAD, VIEW, EDIT, DELETE, LOGIN, TOKEN_CREATE, TOKEN_REVOKE, USER_CREATE, USER_UPDATE
+  entityType String?  @map("entity_type") // document, user, token
+  entityId   String?  @map("entity_id")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activities")
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String   // UPLOAD_DONE, AI_DONE, AI_FAILED, MENTION, etc.
+  title      String
+  message    String
+  link       String?  // /documents/abc
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, read, createdAt])
+  @@map("notifications")
 }
 
 model McpToken {
@@ -77,6 +112,7 @@ model Category {
 model Document {
   id          String         @id @default(cuid())
   title       String
+  description String?        @db.Text
   filename    String         @unique
   format      DocumentFormat
   mimeType   String         @map("mime_type")
