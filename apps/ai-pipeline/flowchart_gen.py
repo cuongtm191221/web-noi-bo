@@ -45,4 +45,17 @@ async def generate_flowchart(
         return match.group(1).strip()
 
     # Otherwise assume entire response is Mermaid
-    return raw
+    return _sanitize_mermaid(raw)
+
+
+def _sanitize_mermaid(syntax: str) -> str:
+    """Sanitize mermaid syntax to avoid parse errors.
+
+    - Strip surrounding double quotes inside node labels: ["Foo"] -> [Foo]
+    - Strip curly braces around node labels to prevent diamond+text issues: {Foo} -> (Foo)
+    """
+    # Replace ["..."] with [...] — quoted text breaks mermaid parser
+    syntax = re.sub(r'\[("([^"\\]|\\.)*")\]', r'[\2]', syntax)
+    # Replace {"..."} with (...) — quoted text in diamond shapes
+    syntax = re.sub(r'\{\s*"([^"]*)"\s*\}', r'(\1)', syntax)
+    return syntax

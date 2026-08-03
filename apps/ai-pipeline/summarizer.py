@@ -11,8 +11,8 @@ SUMMARIZE_PROMPT = """Bạn là trợ lý AI phân tích tài liệu quy trình/
 Hãy tóm tắt nội dung sau thành JSON với format:
 
 {{
-  "executive_summary": "Tóm tắt tổng quan (2-3 câu)",
-  "checklist": ["Bước 1", "Bước 2", ...],
+  "executive_summary": "Tóm tắt tổng quan CHI TIẾT (5-10 câu, bao quát mục đích, đối tượng, phạm vi, các bước/quy định chính)",
+  "checklist": ["Bước 1: ...", "Bước 2: ...", ...],
   "citations": [
     {{
       "claim": "Tiêu đề/Heading hoặc điều khoản quan trọng",
@@ -25,6 +25,13 @@ Hãy tóm tắt nội dung sau thành JSON với format:
     }}
   ]
 }}
+
+QUAN TRỌNG - executive_summary phải dài 5-10 câu:
+- Mục đích/văn bản ban hành
+- Đối tượng áp dụng
+- Phạm vi
+- Các điều khoản/quy trình chính (liệt kê 3-5 điểm chính)
+- Trách nhiệm/đơn vị liên quan
 
 QUAN TRỌNG - citations phải là HEADINGS / ĐIỀU KHOẢN, không phải câu ngẫu nhiên:
 - Mỗi citation = 1 tiêu đề mục lớn (Điều 1, Chương I, Mục A) HOẶC điều khoản quan trọng
