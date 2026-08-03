@@ -63,6 +63,8 @@ model Category {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
+  color     String   @default("#005c9e")
+  icon      String?  @map("icon")
   parentId  String?  @map("parent_id")
   parent    Category?  @relation("CategoryToParent", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryToParent")
