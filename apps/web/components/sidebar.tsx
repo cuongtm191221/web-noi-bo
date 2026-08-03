@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import { FileText, FolderTree, Users, Activity, Plug } from 'lucide-react';
+import { FileText, FolderTree, Users, Activity, Plug, UserCircle, Search, Database } from 'lucide-react';
 import { Logo } from './logo';
-import { SignOutButton } from './sign-out-button';
 import type { Session } from 'next-auth';
 
 type NavItem = {
@@ -13,19 +12,22 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: '/documents', label: 'Tài liệu', icon: FileText, roles: ['admin', 'editor', 'viewer'] },
+  { href: '/search', label: 'Tìm kiếm', icon: Search, roles: ['admin', 'editor', 'viewer'] },
   { href: '/categories', label: 'Danh mục', icon: FolderTree, roles: ['admin'] },
   { href: '/settings/integrations', label: 'Tích hợp MCP', icon: Plug, roles: ['admin', 'editor', 'viewer'] },
   { href: '/admin/users', label: 'Người dùng', icon: Users, roles: ['admin'] },
   { href: '/admin/audit-logs', label: 'Audit log', icon: Activity, roles: ['admin'] },
+  { href: '/admin/backups', label: 'Backup', icon: Database, roles: ['admin'] },
 ];
 
 export function Sidebar({ session }: { session: Session }) {
+  if (!session?.user) return null;
   const role = session.user.role;
   const visibleItems = navItems.filter((item) => item.roles.includes(role));
 
   return (
     <aside style={{
-      width: '270px',
+      width: '240px',
       height: '100vh',
       backgroundColor: 'white',
       borderRight: '1px solid var(--color-border)',
@@ -69,15 +71,6 @@ export function Sidebar({ session }: { session: Session }) {
           </Link>
         ))}
       </nav>
-
-      <div style={{
-        padding: '16px 24px',
-        borderTop: '1px solid var(--color-border)',
-      }}>
-        <div style={{ fontSize: '14px', fontWeight: 600 }}>{session.user.name}</div>
-        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '8px' }}>{session.user.email}</div>
-        <SignOutButton />
-      </div>
     </aside>
   );
 }
