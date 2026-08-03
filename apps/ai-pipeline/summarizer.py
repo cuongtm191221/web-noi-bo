@@ -66,7 +66,9 @@ async def summarize_chunks(
 
     prompt = SUMMARIZE_PROMPT.format(text=combined_text[:8000])  # limit input
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    # CPU inference can take 10-30+ minutes for large documents.
+    # Generous timeout (30 min) — main.py wraps this in its own timeout.
+    async with httpx.AsyncClient(timeout=1800.0) as client:
         response = await client.post(
             f"{ollama_host}/api/generate",
             json={
@@ -74,6 +76,10 @@ async def summarize_chunks(
                 "prompt": prompt,
                 "stream": False,
                 "format": "json",  # Force JSON output
+                "options": {
+                    "num_ctx": 8192,        # match OLLAMA_NUM_CTX
+                    "temperature": 0.3,     # more deterministic
+                },
             },
         )
         response.raise_for_status()
