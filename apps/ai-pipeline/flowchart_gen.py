@@ -45,7 +45,58 @@ async def generate_flowchart(
         return match.group(1).strip()
 
     # Otherwise assume entire response is Mermaid
-    return _sanitize_mermaid(raw)
+    sanitized = _sanitize_mermaid(raw)
+    if _is_valid_mermaid(sanitized):
+        return sanitized
+    # Fallback: generate simple linear flowchart from chunks text
+    return _fallback_flowchart(chunks)
+
+
+def _is_valid_mermaid(syntax: str) -> bool:
+    """Basic mermaid syntax validation."""
+    if not syntax:
+        return False
+    # Must start with graph or flowchart
+    lines = [l.strip() for l in syntax.split("\n") if l.strip()]
+    if not lines:
+        return False
+    first = lines[0]
+    if not (first.startswith("graph") or first.startswith("flowchart")):
+        return False
+    # Must have at least 2 lines
+    if len(lines) < 2:
+        return False
+    # Quick check: no unmatched brackets, no [;]
+    if "[;]" in syntax:
+        return False
+    return True
+
+
+def _fallback_flowchart(chunks: List[Chunk]) -> str:
+    """Generate a simple linear flowchart from chunk keywords.
+
+    Used when LLM output is invalid.
+    """
+    # Extract first sentence from each chunk's text (up to 50 chars)
+    nodes = []
+    for chunk in chunks[:6]:  # Limit to 6 nodes
+        first_line = chunk.text.split("\n")[0].strip()[:50]
+        if first_line:
+            nodes.append(first_line)
+
+    if len(nodes) < 2:
+        return "flowchart TD\n    A[Không có dữ liệu]"
+    lines = ["flowchart TD"]
+    for i, node in enumerate(nodes):
+        letter = chr(65 + i)
+        # Strip any non-ASCII that might break parser
+        clean = re.sub(r'[^a-zA-Z0-9 \-_áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ]', '', node).strip()
+        if not clean:
+            clean = f"Step {i + 1}"
+        lines.append(f"    {letter}[{clean}]")
+    for i in range(len(nodes) - 1):
+        lines.append(f"    {chr(65 + i)} --> {chr(65 + i + 1)}")
+    return "\n".join(lines)
 
 
 def _sanitize_mermaid(syntax: str) -> str:
