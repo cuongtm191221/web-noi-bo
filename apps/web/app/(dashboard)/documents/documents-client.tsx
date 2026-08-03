@@ -49,7 +49,15 @@ export function DocumentsClient({
     setActiveCatId(activeCategoryId);
   }, [initialDocs, activeCategoryId]);
 
-  const formatDate = (d: string | Date) => new Date(d).toLocaleDateString('vi-VN');
+  // Use UTC date components to avoid hydration mismatch
+  // (server renders in UTC, client in browser timezone — toLocaleDateString causes mismatch)
+  const formatDate = (d: string | Date) => {
+    const date = new Date(d);
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${day}/${month}/${year}`;
+  };
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const [showAssign, setShowAssign] = useState(false);
