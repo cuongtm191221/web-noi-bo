@@ -136,20 +136,18 @@ async def _process_pipeline(document_id: str, storage_path: str, format: str):
             logger.error(f"[{document_id}] citations failed: {e}")
             traceback.print_exc()
 
-        # 6. Flowchart (best-effort)
+        # 6. Outline (heading extraction — replaces LLM flowchart)
         try:
-            logger.info(f"[{document_id}] step=flowchart (may take 1-3 min)")
-            mermaid = await asyncio.wait_for(
-                generate_flowchart(chunks, OLLAMA_HOST, OLLAMA_MODEL),
-                timeout=OLLAMA_TIMEOUT,
-            )
-            if mermaid:
-                await save_flowchart(document_id, mermaid)
-                logger.info(f"[{document_id}] flowchart saved")
-            else:
-                logger.warning(f"[{document_id}] flowchart empty (model returned nothing)")
-        except (asyncio.TimeoutError, Exception) as e:
-            logger.error(f"[{document_id}] flowchart failed: {e}")
+            logger.info(f"[{document_id}] step=outline extraction")
+            from extract_headings import extract_headings, build_outline_tree
+            headings = extract_headings(chunks)
+            outline = build_outline_tree(headings)
+            logger.info(f"[{document_id}] extracted {len(headings)} headings")
+            # Save outline as JSON in document_flowcharts table (mermaidSyntax field)
+            import json
+            await save_flowchart(document_id, json.dumps(outline, ensure_ascii=False))
+        except Exception as e:
+            logger.error(f"[{document_id}] outline extraction failed: {e}")
             traceback.print_exc()
 
         # 7. Mark published (we have at least summary + chunks)

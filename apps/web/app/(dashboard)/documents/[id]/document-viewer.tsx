@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { ProcessingStatus } from './processing-status';
 import { SummaryTab } from './summary-tab';
-import { FlowchartTab } from './flowchart-tab';
+import { OutlineTab } from './outline-tab';
 import { CitationTab } from './citation-tab';
 import { DocumentContent } from './document-content';
 
@@ -15,7 +15,7 @@ type Props = {
   hasCitations: boolean;
 };
 
-type Tab = 'viewer' | 'summary' | 'flowchart' | 'citation';
+type Tab = 'viewer' | 'summary' | 'outline' | 'citation';
 
 export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, hasCitations }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('viewer');
@@ -85,12 +85,12 @@ export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, h
           Tóm tắt
         </button>
         <button
-          onClick={() => setActiveTab('flowchart')}
+          onClick={() => setActiveTab('outline')}
           disabled={!status.hasFlowchart}
-          style={tabStyle(activeTab === 'flowchart', !status.hasFlowchart)}
+          style={tabStyle(activeTab === 'outline', !status.hasFlowchart)}
           title={status.hasFlowchart ? '' : 'Đang xử lý AI...'}
         >
-          Sơ đồ
+          Mục lục
         </button>
         <button
           onClick={() => setActiveTab('citation')}
@@ -106,8 +106,8 @@ export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, h
         <SummaryTab documentId={documentId} />
       )}
 
-      {activeTab === 'flowchart' && status.hasFlowchart && (
-        <FlowchartTab documentId={documentId} />
+      {activeTab === 'outline' && status.hasFlowchart && (
+        <OutlineTab documentId={documentId} onNodeClick={handleCitationClick} />
       )}
 
       {activeTab === 'citation' && status.hasCitations && (
@@ -144,7 +144,7 @@ export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, h
         </div>
       )}
 
-      {activeTab === 'flowchart' && !status.hasFlowchart && (
+      {activeTab === 'outline' && !status.hasFlowchart && (
         <div style={{
           backgroundColor: 'white',
           borderRadius: '8px',
@@ -162,7 +162,7 @@ export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, h
             animation: 'pulse 1.5s ease-in-out infinite',
             marginRight: '8px',
           }} />
-          AI đang tạo sơ đồ, vui lòng đợi...
+          Đang trích xuất mục lục...
         </div>
       )}
 
