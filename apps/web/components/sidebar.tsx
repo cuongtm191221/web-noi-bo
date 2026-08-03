@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FileText, FolderTree, Users, Activity } from 'lucide-react';
+import { FileText, FolderTree, Users, Activity, Plug } from 'lucide-react';
 import { Logo } from './logo';
 import { SignOutButton } from './sign-out-button';
 import type { Session } from 'next-auth';
@@ -14,6 +14,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: '/documents', label: 'Tài liệu', icon: FileText, roles: ['admin', 'editor', 'viewer'] },
   { href: '/categories', label: 'Danh mục', icon: FolderTree, roles: ['admin'] },
+  { href: '/settings/integrations', label: 'Tích hợp MCP', icon: Plug, roles: ['admin', 'editor', 'viewer'] },
   { href: '/admin/users', label: 'Người dùng', icon: Users, roles: ['admin'] },
   { href: '/admin/audit-logs', label: 'Audit log', icon: Activity, roles: ['admin'] },
 ];
