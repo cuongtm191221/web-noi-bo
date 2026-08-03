@@ -32,8 +32,8 @@ OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
 STORAGE_URL = os.environ.get("STORAGE_URL", "http://web:3000")
 UPLOADS_DIR = os.environ.get("UPLOADS_DIR", "/uploads")
 
-# Timeout for each Ollama call (5 minutes)
-OLLAMA_TIMEOUT = 300
+# Timeout for each Ollama call (10 minutes)
+OLLAMA_TIMEOUT = 600
 
 PARSER_MAP = {
     "pdf": parse_pdf,

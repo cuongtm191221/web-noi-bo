@@ -25,7 +25,7 @@ async def generate_flowchart(
 
     prompt = FLOWCHART_PROMPT.format(text=combined_text)
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         response = await client.post(
             f"{ollama_host}/api/generate",
             json={
