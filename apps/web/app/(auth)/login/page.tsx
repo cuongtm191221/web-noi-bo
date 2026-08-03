@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { Logo } from '@/components/logo';
+import { BrandLogo } from '@/components/brand-logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function LoginPage() {
         border: '1px solid var(--color-border)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px' }}>
-          <Logo />
+          <BrandLogo />
         </div>
 
         <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '8px' }}>
