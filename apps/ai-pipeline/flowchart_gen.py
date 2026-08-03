@@ -102,8 +102,10 @@ def _fallback_flowchart(chunks: List[Chunk]) -> str:
 def _sanitize_mermaid(syntax: str) -> str:
     """Sanitize mermaid syntax to avoid parse errors.
 
-    Strategy: convert any node label with quotes/punctuation to plain text
-    and keep only ASCII-safe characters.
+    Strategy:
+    - Strip quoted text in node labels, edge labels, diamond shapes
+    - Remove non-Vietnamese non-ASCII characters (Chinese, Japanese, etc.)
+    - Fix Yes/No edge labels: C -- Yes --> D  →  C -->|Yes| D
     """
     # Replace quoted edge labels: -- "label" --> -- label -->
     syntax = re.sub(r'--\s*"([^"]*)"\s*-->', r'-- \1 -->', syntax)
@@ -118,9 +120,28 @@ def _sanitize_mermaid(syntax: str) -> str:
     syntax = re.sub(r'\("([^"]*)"\)', r'(\1)', syntax)
     # Remove [;] empty labels
     syntax = re.sub(r'\[;\]', r'[]', syntax)
+    # Fix Yes/No edge labels: A -- Yes --> B  →  A -->|Yes| B
+    syntax = re.sub(r'--\s*(Yes|No|Có|Không|True|False)\s*-->', r'-->|\1|', syntax)
+    syntax = re.sub(r'--\s*(Yes|No|Có|Không|True|False)\s*--', r'-->|\1|', syntax)
     # Remove trailing semicolons on lines
     syntax = re.sub(r';\s*$', '', syntax, flags=re.MULTILINE)
-    # Remove Vietnamese quotation marks “ ” (mermaid parser confuses them)
+    # Remove CJK chars (Chinese/Japanese/Korean) inside node labels — strip from [...], {...}, (...) contents
+    def clean_label(match: re.Match) -> str:
+        opener = match.group(1)
+        label = match.group(2)
+        closer = match.group(3)
+        # Strip CJK Unified Ideographs + Hangul + Hiragana/Katakana
+        cleaned = re.sub(r'[一-鿿぀-ゟ゠-ヿ가-힯]', '', label)
+        # Strip arrows/special chars that confuse mermaid: → ← ↑ ↓ ※ ❯
+        cleaned = re.sub(r'[→←↑↓※❯⇨]', '', cleaned)
+        if not cleaned.strip():
+            cleaned = "Step"
+        return f"{opener}{cleaned}{closer}"
+
+    syntax = re.sub(r'(\[)([^\]]*)(\])', clean_label, syntax)
+    syntax = re.sub(r'(\{)([^\}]*)(\})', clean_label, syntax)
+    syntax = re.sub(r'(\()([^\)]*)(\))', clean_label, syntax)
+    # Remove Vietnamese quotation marks (mermaid parser confuses them)
     syntax = syntax.replace('“', '"').replace('”', '"')
     syntax = syntax.replace("'", "'").replace("'", "'")
     return syntax
