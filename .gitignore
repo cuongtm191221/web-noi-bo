@@ -53,7 +53,7 @@ apps/web/uploads/.*  # ignore dotfiles (e.g., .DS_Store)
 !apps/web/uploads/.gitkeep
 
 # Backups
-backups/
+/local-backups/
 *.sql.gz
 
 # Test
