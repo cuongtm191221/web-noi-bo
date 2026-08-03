@@ -21,10 +21,10 @@ HEADING_PATTERNS = [
     (r"^\s*(Khoản|Clause)\s+(\d+)", 4),
     # Bước / Step (level 2)
     (r"^\s*(Bước|Step|STT)\s+(\d+)", 3),
-    # Numbered headings: "1.", "1)", "I.", "II."
-    (r"^\s*([IVXLCDM]+)\.\s+([A-ZÀ-Ỹ][A-Za-zÀ-ỹ\s]{3,})$", 3),
-    (r"^\s*(\d+)\.\s+([A-ZÀ-Ỹ][A-Za-zÀ-ỹ\s]{3,})$", 3),
-    (r"^\s*(\d+)\)\s+([A-ZÀ-Ỹ][A-Za-zÀ-ỹ\s]{3,})$", 3),
+    # Numbered headings: "1.", "1)", "I.", "II." — allow colons and quotes
+    (r"^\s*([IVXLCDM]+)\.\s+(.{3,80})$", 3),
+    (r"^\s*(\d+)\.\s+(.{3,80})$", 3),
+    (r"^\s*(\d+)\)\s+(.{3,80})$", 3),
     # ALL CAPS heading (level 1)
     (r"^([A-Z][A-Z\s]{4,30})$", 1),
 ]
