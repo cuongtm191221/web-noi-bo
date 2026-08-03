@@ -10,6 +10,7 @@ type OutlineNode = {
   slide_number: number | null;
   sheet_name: string | null;
   row_number: number | null;
+  preview_text?: string;
   children: OutlineNode[];
 };
 
@@ -38,7 +39,6 @@ export function OutlineTab({ documentId, onNodeClick }: Props) {
   }
 
   if (!data) {
-    // Lazy load
     fetch(`/api/documents/${documentId}/outline`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -90,7 +90,7 @@ export function OutlineTab({ documentId, onNodeClick }: Props) {
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
-        Mục lục ({countNodes(data)} mục)
+        Sơ đồ nội dung ({countNodes(data)} mục)
       </h3>
       <OutlineList nodes={data} onNodeClick={onNodeClick} />
     </div>
@@ -115,75 +115,152 @@ function OutlineList({
       borderLeft: depth === 0 ? 'none' : '2px solid var(--color-border)',
     }}>
       {nodes.map((node, idx) => (
-        <li
+        <OutlineItem
           key={`${node.chunk_index}-${idx}`}
-          style={{
-            padding: '8px 12px',
-            marginTop: idx === 0 ? 0 : '4px',
-            cursor: 'pointer',
-            borderRadius: '6px',
-            transition: 'background-color 0.15s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f1f5f9';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-          onClick={() => onNodeClick(node.page_number ?? undefined)}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <LevelBadge level={node.level} />
-            <span style={{
-              flex: 1,
-              fontSize: depth === 0 ? '15px' : '14px',
-              fontWeight: depth === 0 ? 500 : 400,
-              color: 'var(--color-text-dark)',
-            }}>
-              {node.text}
-            </span>
-            {node.page_number !== null && (
-              <span style={{
-                fontSize: '12px',
-                color: 'var(--color-text-muted)',
-                backgroundColor: '#f1f5f9',
-                padding: '2px 8px',
-                borderRadius: '4px',
-              }}>
-                Trang {node.page_number}
-              </span>
-            )}
-            {node.slide_number !== null && (
-              <span style={{
-                fontSize: '12px',
-                color: 'var(--color-text-muted)',
-                backgroundColor: '#f1f5f9',
-                padding: '2px 8px',
-                borderRadius: '4px',
-              }}>
-                Slide {node.slide_number}
-              </span>
-            )}
-          </div>
-          {node.children.length > 0 && (
-            <OutlineList
-              nodes={node.children}
-              onNodeClick={onNodeClick}
-              depth={depth + 1}
-            />
-          )}
-        </li>
+          node={node}
+          onNodeClick={onNodeClick}
+          depth={depth}
+        />
       ))}
     </ul>
   );
 }
 
+function OutlineItem({
+  node,
+  onNodeClick,
+  depth,
+}: {
+  node: OutlineNode;
+  onNodeClick: (pageNumber: number | undefined) => void;
+  depth: number;
+}) {
+  const [expanded, setExpanded] = useState(depth < 2); // Auto-expand first 2 levels
+  const hasChildren = node.children.length > 0;
+
+  const handleClick = () => {
+    if (hasChildren) {
+      setExpanded(!expanded);
+    } else {
+      onNodeClick(node.page_number ?? undefined);
+    }
+  };
+
+  return (
+    <li
+      style={{
+        marginTop: '6px',
+        borderRadius: '6px',
+        transition: 'background-color 0.15s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = '#f8fafc';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '12px',
+          padding: '8px 12px',
+          cursor: 'pointer',
+        }}
+        onClick={handleClick}
+      >
+        <LevelBadge level={node.level} />
+        <span style={{
+          flex: 1,
+          fontSize: depth === 0 ? '15px' : '14px',
+          fontWeight: depth === 0 ? 600 : (depth === 1 ? 500 : 400),
+          color: 'var(--color-text-dark)',
+          lineHeight: 1.5,
+        }}>
+          {node.text}
+        </span>
+        {hasChildren && (
+          <span style={{
+            fontSize: '12px',
+            color: 'var(--color-text-muted)',
+            transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.15s',
+          }}>
+            ▶
+          </span>
+        )}
+        {!hasChildren && node.page_number !== null && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onNodeClick(node.page_number ?? undefined);
+            }}
+            style={{
+              fontSize: '11px',
+              padding: '3px 10px',
+              backgroundColor: 'var(--color-primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 500,
+            }}
+            title="Xem chi tiết trong tài liệu"
+          >
+            Xem →
+          </button>
+        )}
+        {!hasChildren && node.page_number !== null && (
+          <span style={{
+            fontSize: '12px',
+            color: 'var(--color-text-muted)',
+          }}>
+            Trang {node.page_number}
+          </span>
+        )}
+        {!hasChildren && node.slide_number !== null && (
+          <span style={{
+            fontSize: '12px',
+            color: 'var(--color-text-muted)',
+          }}>
+            Slide {node.slide_number}
+          </span>
+        )}
+      </div>
+
+      {/* Preview text */}
+      {expanded && node.preview_text && (
+        <div style={{
+          marginLeft: '32px',
+          marginTop: '4px',
+          marginBottom: '8px',
+          padding: '10px 14px',
+          backgroundColor: '#f1f5f9',
+          borderLeft: '3px solid var(--color-primary)',
+          borderRadius: '4px',
+          fontSize: '13px',
+          lineHeight: 1.6,
+          color: 'var(--color-text-dark)',
+        }}>
+          {node.preview_text}
+        </div>
+      )}
+
+      {/* Children */}
+      {expanded && hasChildren && (
+        <OutlineList nodes={node.children} onNodeClick={onNodeClick} depth={depth + 1} />
+      )}
+    </li>
+  );
+}
+
 function LevelBadge({ level }: { level: number }) {
-  const colorMap: Record<number, { bg: string; fg: string; label: string }> = {
-    1: { bg: '#0d226b', fg: 'white', label: '1' },
-    2: { bg: '#005c9e', fg: 'white', label: '2' },
-    3: { bg: '#009f4d', fg: 'white', label: '3' },
-    4: { bg: '#6b7280', fg: 'white', label: '4' },
+  const colorMap: Record<number, { bg: string; label: string }> = {
+    1: { bg: '#0d226b', label: 'C' },
+    2: { bg: '#005c9e', label: 'Đ' },
+    3: { bg: '#009f4d', label: 'M' },
+    4: { bg: '#6b7280', label: 'K' },
   };
   const colors = colorMap[level] ?? colorMap[4];
 
@@ -192,15 +269,16 @@ function LevelBadge({ level }: { level: number }) {
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      width: '20px',
-      height: '20px',
+      width: '22px',
+      height: '22px',
       borderRadius: '4px',
       backgroundColor: colors.bg,
-      color: colors.fg,
-      fontSize: '11px',
+      color: 'white',
+      fontSize: '12px',
       fontWeight: 600,
+      flexShrink: 0,
     }}>
-      L{colors.label}
+      {colors.label}
     </span>
   );
 }

@@ -31,10 +31,11 @@ HEADING_PATTERNS = [
 
 
 def extract_headings(chunks: List[Chunk]) -> List[Dict[str, Any]]:
-    """Extract hierarchical outline from chunks.
+    """Extract hierarchical outline from chunks with content preview.
 
     Returns:
-        List of {text, level, chunk_index, page_number, slide_number, sheet_name, row_number}
+        List of {text, level, chunk_index, page_number, preview_text,
+                 slide_number, sheet_name, row_number}
         sorted by chunk_index.
     """
     headings = []
@@ -43,7 +44,11 @@ def extract_headings(chunks: List[Chunk]) -> List[Dict[str, Any]]:
     for chunk in chunks:
         # Split chunk into lines and check each
         lines = chunk.text.split("\n")
-        for line in lines:
+        heading_line_idx = None
+        heading_text = None
+        heading_level = None
+
+        for idx, line in enumerate(lines):
             line = line.strip()
             if not line or len(line) > 100:
                 continue  # Skip empty/long lines
@@ -56,6 +61,21 @@ def extract_headings(chunks: List[Chunk]) -> List[Dict[str, Any]]:
                         break
                     seen.add(text_key)
 
+                    # Preview: lines after the heading (skip blank lines)
+                    preview_lines = []
+                    for next_line in lines[idx + 1:]:
+                        next_line = next_line.strip()
+                        if not next_line:
+                            continue
+                        if any(re.match(p, next_line) for p, _ in HEADING_PATTERNS):
+                            break  # Stop at next heading
+                        preview_lines.append(next_line)
+                        if sum(len(l) for l in preview_lines) > 200:
+                            break
+                    preview_text = " ".join(preview_lines)[:200]
+                    if len(" ".join(preview_lines)) > 200:
+                        preview_text += "..."
+
                     headings.append({
                         "text": line[:80],
                         "level": level,
@@ -64,6 +84,7 @@ def extract_headings(chunks: List[Chunk]) -> List[Dict[str, Any]]:
                         "slide_number": chunk.location.get("slide_number"),
                         "sheet_name": chunk.location.get("sheet_name"),
                         "row_number": chunk.location.get("row_number"),
+                        "preview_text": preview_text,
                     })
                     break
 
