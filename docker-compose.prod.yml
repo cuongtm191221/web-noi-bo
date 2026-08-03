@@ -1,0 +1,86 @@
+# Production overrides for docker-compose.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Differences from base docker-compose.yml:
+# - NODE_ENV=production, restart: always
+# - Web: no source mount (image is self-contained), use ENTRYPOINT from Dockerfile
+# - Postgres: bind to 127.0.0.1 only (not exposed publicly)
+# - Ollama: bind to 127.0.0.1 only
+# - All services get resource limits and healthchecks
+
+services:
+  web:
+    restart: always
+    environment:
+      NODE_ENV: production
+      # DATABASE_URL and AUTH_SECRET come from base compose (read from .env)
+    # No source mount — use built image's CMD
+    volumes:
+      - uploads_data:/uploads
+      - backups_data:/backups
+      # NOTE: no ./:/app mount — production uses compiled image
+    command: []  # Override base command (npm run dev) — use Dockerfile CMD instead
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+        reservations:
+          memory: 512M
+    init: true
+
+  postgres:
+    restart: always
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=localhost"
+      - "-c"
+      - "password_encryption=scram-sha-256"
+    # Bind to 127.0.0.1 only — only host can connect
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    init: true
+
+  ollama:
+    restart: always
+    # Bind to 127.0.0.1 only — Ollama has no auth, don't expose
+    ports:
+      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
+    deploy:
+      resources:
+        limits:
+          memory: 10G
+        reservations:
+          memory: 4G
+    init: true
+
+  ai-pipeline:
+    restart: always
+    ports: []  # Internal — accessed via web service
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    init: true
+
+  mcp-server:
+    restart: always
+    init: true

@@ -1,17 +1,28 @@
-import Image from 'next/image';
-
 export function Logo({ className }: { className?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className={className}>
-      <Image
-        src="/rikkei-logo.svg"
-        alt="Rikkei Education"
-        width={40}
-        height={40}
-        style={{ height: '40px', width: 'auto' }}
-        priority
-      />
-      <span style={{ fontWeight: 700, fontSize: '18px', color: 'var(--color-primary)' }}>Rikkei Education</span>
+      <div
+        aria-label="Rikkei Education"
+        style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '6px',
+          backgroundColor: 'white',
+          color: 'var(--color-text-dark)',
+          fontWeight: 800,
+          fontSize: '18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'var(--font-sans)',
+          letterSpacing: '-0.02em',
+        }}
+      >
+        R
+      </div>
+      <span style={{ fontWeight: 700, fontSize: '15px', color: 'white' }}>
+        Rikkei Education
+      </span>
     </div>
   );
 }

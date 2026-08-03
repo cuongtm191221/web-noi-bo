@@ -80,9 +80,8 @@ export function TopNavbar({ session }: { session: Session }) {
   return (
     <header style={{
       height: '56px',
-      background: 'linear-gradient(135deg, #0d226b 0%, #005c9e 100%)',
-      borderBottom: '1px solid var(--color-border)',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+      background: 'var(--color-text-dark)',
+      boxShadow: '0 2px 4px rgba(30, 41, 59, 0.15)',
       display: 'flex',
       alignItems: 'center',
       padding: '0 24px',
@@ -102,15 +101,15 @@ export function TopNavbar({ session }: { session: Session }) {
           style={{
             position: 'relative',
             padding: '8px',
-            backgroundColor: 'rgba(255,255,255,0.1)',
+            backgroundColor: 'rgba(255,255,255,0.12)',
             border: 'none',
             borderRadius: '8px',
             cursor: 'pointer',
             color: 'white',
             display: 'flex', alignItems: 'center',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)')}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.22)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.12)')}
         >
           <Bell size={18} />
           {unread > 0 && (
@@ -242,16 +241,16 @@ export function TopNavbar({ session }: { session: Session }) {
           style={{
             display: 'flex', alignItems: 'center', gap: '8px',
             padding: '6px 14px',
-            backgroundColor: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.25)',
+            backgroundColor: 'rgba(255,255,255,0.12)',
+            border: '1px solid rgba(255,255,255,0.3)',
             borderRadius: '20px',
             cursor: 'pointer',
             fontSize: '13px',
             color: 'white',
             fontWeight: 500,
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)')}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.22)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.12)')}
         >
           <User size={14} />
           {session.user?.name || 'Tài khoản'}

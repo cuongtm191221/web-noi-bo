@@ -2,14 +2,17 @@ import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import { DocumentStatusBadge } from '@/components/document-status-badge';
 import { DocumentViewer } from './document-viewer';
+import { EditDocumentButton } from './edit-document-button';
 
 export default async function DocumentViewerPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const session = await auth();
   const { id } = await params;
 
   const doc = await prisma.document.findUnique({
@@ -25,6 +28,8 @@ export default async function DocumentViewerPage({
   if (!doc) {
     notFound();
   }
+
+  const canEdit = session?.user?.id && (doc.uploaderId === session.user.id || session.user.role === 'admin');
 
   return (
     <div>
@@ -70,8 +75,18 @@ export default async function DocumentViewerPage({
               <span>·</span>
               <span>{doc.createdAt.toLocaleDateString('vi-VN')}</span>
             </div>
+            {doc.description && (
+              <p style={{ marginTop: '12px', fontSize: '14px', color: 'var(--color-text-dark)' }}>
+                {doc.description}
+              </p>
+            )}
           </div>
-          <DocumentStatusBadge status={doc.status} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <DocumentStatusBadge status={doc.status} />
+            {canEdit && (
+              <EditDocumentButton documentId={doc.id} />
+            )}
+          </div>
         </div>
 
         {doc.category && (

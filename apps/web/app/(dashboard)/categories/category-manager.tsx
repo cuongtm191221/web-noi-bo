@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Pencil, Trash2, FolderOpen } from 'lucide-react';
 
 type Category = {
   id: string;
@@ -119,6 +120,7 @@ export function CategoryManager({ isAdmin }: { isAdmin: boolean }) {
                 isAdmin={isAdmin}
                 onEdit={() => setEditing(c)}
                 onDelete={() => handleDelete(c)}
+                onManage={() => { window.location.href = `/documents?category=${c.id}`; }}
               />
             ))}
           </div>
@@ -153,11 +155,13 @@ function CategoryCard({
   isAdmin,
   onEdit,
   onDelete,
+  onManage,
 }: {
   category: Category;
   isAdmin: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onManage: () => void;
 }) {
   const count = category._count?.documents ?? 0;
   return (
@@ -197,28 +201,56 @@ function CategoryCard({
         </code>
       </div>
       {isAdmin && (
-        <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+        <div style={{
+          display: 'flex', gap: '4px', marginTop: 'auto',
+          paddingTop: '8px', borderTop: '1px solid var(--color-border)',
+        }}>
           <button
-            onClick={onEdit}
+            onClick={onManage}
+            title="Quản lý tài liệu"
             style={{
-              flex: 1, padding: '6px 10px',
+              flex: 1, display: 'inline-flex', alignItems: 'center',
+              justifyContent: 'center', gap: '4px',
+              padding: '6px 8px',
               backgroundColor: 'transparent',
               color: 'var(--color-primary)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '4px', fontSize: '12px', cursor: 'pointer',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              fontWeight: 500,
             }}
           >
-            Sửa
+            <FolderOpen size={14} />
+            Tài liệu
+          </button>
+          <button
+            onClick={onEdit}
+            title="Sửa danh mục"
+            style={{
+              padding: '6px 8px',
+              backgroundColor: 'transparent',
+              color: 'var(--color-text-muted)',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            <Pencil size={14} />
           </button>
           <button
             onClick={onDelete}
+            title="Xóa danh mục"
             style={{
-              padding: '6px 10px', backgroundColor: 'transparent',
-              color: '#dc2626', border: '1px solid #fecaca',
-              borderRadius: '4px', fontSize: '12px', cursor: 'pointer',
+              padding: '6px 8px',
+              backgroundColor: 'transparent',
+              color: '#dc2626',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
             }}
           >
-            Xóa
+            <Trash2 size={14} />
           </button>
         </div>
       )}

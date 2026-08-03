@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logActivity } from '@/lib/activity';
+import { rateLimit, LIMITS, getRateLimitHeaders } from '@/lib/rate-limit';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -61,6 +63,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  // Rate-limit per user (prevent admin account abuse)
+  const rl = rateLimit(`users-create:${session.user.id}`, LIMITS.admin);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Quá nhiều yêu cầu. Vui lòng thử lại sau.' },
+      { status: 429, headers: getRateLimitHeaders(rl) }
+    );
+  }
+
   const body = await request.json();
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -83,6 +94,14 @@ export async function POST(request: NextRequest) {
   const user = await prisma.user.create({
     data: { email, name, passwordHash, role },
     select: { id: true, email: true, name: true, role: true, createdAt: true },
+  });
+
+  void logActivity({
+    userId: session.user.id,
+    action: 'USER_CREATE',
+    entityType: 'user',
+    entityId: user.id,
+    metadata: { email, role },
   });
 
   return NextResponse.json({ user });

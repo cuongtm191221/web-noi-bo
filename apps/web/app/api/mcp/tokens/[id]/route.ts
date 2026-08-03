@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logActivity } from '@/lib/activity';
 
 export async function DELETE(
   request: NextRequest,
@@ -21,5 +22,13 @@ export async function DELETE(
   }
 
   await prisma.mcpToken.delete({ where: { id } });
+
+  void logActivity({
+    userId: session.user.id,
+    action: 'TOKEN_REVOKE',
+    entityType: 'token',
+    entityId: id,
+  });
+
   return NextResponse.json({ success: true });
 }

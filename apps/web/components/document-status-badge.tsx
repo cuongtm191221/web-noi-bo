@@ -1,4 +1,4 @@
-type Status = 'draft' | 'published' | 'archived';
+type Status = 'draft' | 'published' | 'archived' | 'parsing' | 'failed';
 
 const STATUS_CONFIG: Record<Status, { label: string; bg: string; color: string }> = {
   draft: {
@@ -15,6 +15,16 @@ const STATUS_CONFIG: Record<Status, { label: string; bg: string; color: string }
     label: 'Đã lưu trữ',
     bg: '#f3f4f6',
     color: '#374151',
+  },
+  parsing: {
+    label: 'Đang xử lý',
+    bg: '#dbeafe',
+    color: '#1e40af',
+  },
+  failed: {
+    label: 'Lỗi',
+    bg: '#fee2e2',
+    color: '#991b1b',
   },
 };
 

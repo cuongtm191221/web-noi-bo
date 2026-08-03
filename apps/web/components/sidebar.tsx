@@ -38,8 +38,13 @@ export function Sidebar({ session }: { session: Session }) {
       flexDirection: 'column',
     }}>
       <div style={{
-        padding: '20px 24px',
-        borderBottom: '1px solid var(--color-border)',
+        padding: '11px 16px',
+        background: 'var(--color-text-dark)',
+        boxShadow: '0 2px 4px rgba(30, 41, 59, 0.15)',
+        borderBottom: '1px solid var(--color-text-dark)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}>
         <Logo />
       </div>

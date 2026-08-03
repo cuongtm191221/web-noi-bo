@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateToken } from '@/lib/mcp-tokens';
+import { logActivity } from '@/lib/activity';
 
 export async function GET() {
   const session = await auth();
@@ -52,6 +53,14 @@ export async function POST(request: NextRequest) {
       name: true,
       createdAt: true,
     },
+  });
+
+  void logActivity({
+    userId,
+    action: 'TOKEN_CREATE',
+    entityType: 'token',
+    entityId: token.id,
+    metadata: { name },
   });
 
   return NextResponse.json({

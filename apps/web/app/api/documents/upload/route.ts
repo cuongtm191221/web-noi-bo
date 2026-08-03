@@ -4,6 +4,9 @@ import path from 'node:path';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { validateFileSize, validateFileType } from '@/lib/document-helpers';
+import { logActivity } from '@/lib/activity';
+import { notify } from '@/lib/notification';
+import { rateLimit, LIMITS, getRateLimitHeaders } from '@/lib/rate-limit';
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR ?? path.join(process.cwd(), 'apps', 'web', 'uploads');
 
@@ -11,6 +14,15 @@ export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate limit: 50 uploads per hour per user
+  const rl = rateLimit(`upload:${session.user.id}`, LIMITS.upload);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Quá nhiều upload. Thử lại sau ${rl.retryAfter}s.` },
+      { status: 429, headers: getRateLimitHeaders(rl) },
+    );
   }
 
   const role = session.user.role;
@@ -84,6 +96,23 @@ export async function POST(request: NextRequest) {
       }),
     }).catch((err) => {
       console.warn('AI pipeline trigger failed (continuing):', err);
+    });
+
+    // Log activity (fire-and-forget)
+    void logActivity({
+      userId: session.user.id,
+      action: 'UPLOAD',
+      entityType: 'document',
+      entityId: updated.id,
+      metadata: { title: updated.title, format: updated.format, sizeBytes: updated.sizeBytes },
+    });
+
+    void notify({
+      userId: session.user.id,
+      type: 'UPLOAD_DONE',
+      title: 'Upload thành công',
+      message: `${updated.title} đang được xử lý AI.`,
+      link: `/documents/${updated.id}`,
     });
 
     return NextResponse.json({

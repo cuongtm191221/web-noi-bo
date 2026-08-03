@@ -3,26 +3,43 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// Admin credentials — MUST be set via env for production seeding
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_NAME = process.env.ADMIN_NAME ?? 'Admin Rikkei';
+
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+  console.error('❌ ADMIN_EMAIL and ADMIN_PASSWORD env vars are required.');
+  console.error('   Example: ADMIN_EMAIL=admin@yourdomain.com ADMIN_PASSWORD=YourSecurePass123 npm run db:seed');
+  process.exit(1);
+}
+
+if (ADMIN_PASSWORD.length < 12) {
+  console.error('❌ ADMIN_PASSWORD must be at least 12 characters.');
+  process.exit(1);
+}
+
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Seed admin user
-  const adminEmail = 'admin@rikkei.edu.vn';
-  const adminPassword = 'admin123';
-  const passwordHash = await bcrypt.hash(adminPassword, 12);
+  // Seed admin user (ADMIN_PASSWORD guaranteed non-empty by check above)
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD!, 12);
 
   const admin = await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: {},
+    where: { email: ADMIN_EMAIL },
+    update: {
+      // Do NOT update password on re-seed — preserves manual changes
+    },
     create: {
-      email: adminEmail,
+      email: ADMIN_EMAIL,
       passwordHash,
-      name: 'Admin Rikkei',
+      name: ADMIN_NAME,
       role: 'admin',
     },
   });
 
-  console.log(`✅ Admin user: ${admin.email} / ${adminPassword}`);
+  console.log(`✅ Admin user: ${admin.email}`);
+  console.log('   (Use the ADMIN_PASSWORD you set; password is not echoed for security.)');
 
   // Seed categories
   const categories = [

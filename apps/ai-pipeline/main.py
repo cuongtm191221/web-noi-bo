@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 import os
@@ -31,6 +32,18 @@ OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://ollama:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
 STORAGE_URL = os.environ.get("STORAGE_URL", "http://web:3000")
 UPLOADS_DIR = os.environ.get("UPLOADS_DIR", "/uploads")
+
+# CORS whitelist — production should set ALLOWED_ORIGINS to the app domain
+ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000").split(",") if o.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 
 # Timeout for each Ollama call (10 minutes)
 OLLAMA_TIMEOUT = 600

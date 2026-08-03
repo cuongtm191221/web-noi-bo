@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createReadStream, statSync } from 'node:fs';
+import { Readable } from 'node:stream';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
@@ -23,20 +26,18 @@ export async function GET(
     const stat = statSync(doc.storagePath);
     const fileSize = stat.size;
 
-    const stream = createReadStream(doc.storagePath);
-    const chunks: Uint8Array[] = [];
+    // Stream file directly to response without buffering in memory
+    // This avoids loading a 50MB file into RAM before sending
+    const nodeStream = createReadStream(doc.storagePath);
+    // Convert Node ReadableStream to Web ReadableStream for NextResponse
+    const webStream = Readable.toWeb(nodeStream) as ReadableStream;
 
-    for await (const chunk of stream) {
-      chunks.push(chunk as Uint8Array);
-    }
-
-    const buffer = Buffer.concat(chunks);
-
-    return new NextResponse(buffer, {
+    return new NextResponse(webStream, {
       headers: {
-        'Content-Type': doc.mimeType,
-        'Content-Disposition': `attachment; filename="${doc.filename}"`,
+        'Content-Type': doc.mimeType || 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(doc.filename)}"`,
         'Content-Length': String(fileSize),
+        'Cache-Control': 'private, max-age=0',
       },
     });
   } catch (err) {

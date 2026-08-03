@@ -9,16 +9,20 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: development
-      DATABASE_URL: postgresql://rikkei@postgres:5432/rikkei_docs
-      AUTH_SECRET: dev_secret_change_in_production_min_32_chars_long
-      NEXTAUTH_URL: http://localhost:3000
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rikkei}:${POSTGRES_PASSWORD:-rikkei_dev_password}@postgres:5432/${POSTGRES_DB:-rikkei_docs}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required — generate with openssl rand -base64 32}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       AI_PIPELINE_URL: http://ai-pipeline:8000
       UPLOADS_DIR: /uploads
       BACKUP_DIR: /backups
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin Rikkei}
     ports:
       - "${WEB_PORT:-3000}:3000"
     volumes:
+      # Dev mode: mount source for hot-reload
       - .:/app
       - /app/node_modules
       - /app/apps/web/node_modules
@@ -26,30 +30,34 @@ services:
       - uploads_data:/uploads
       - backups_data:/backups
     # Volumes override node_modules, so regenerate Prisma client at startup
-    command: sh -c "npx prisma generate --schema=./apps/web/prisma/schema.prisma && npm run dev --workspace=apps/web"
+    # Override in docker-compose.prod.yml for production
+    command: >
+      sh -c "npx prisma generate --schema=./apps/web/prisma/schema.prisma &&
+             npm run dev --workspace=apps/web"
 
   postgres:
     image: postgres:16-alpine
     container_name: rikkei-postgres
     restart: unless-stopped
-    # NOTE for internal-only deployment (<50 users): trust auth on local network.
-    # The DB is only exposed to the host network (no public exposure).
-    # For production-grade hardening, switch to scram-sha-256 + strong password.
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-rikkei}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rikkei_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-rikkei_docs}
-      POSTGRES_HOST_AUTH_METHOD: trust
+      # Dev: trust auth on local network for easier debugging.
+      # Production override: scram-sha-256 (see docker-compose.prod.yml)
+      POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD:-trust}
     command:
       - "postgres"
       - "-c"
       - "listen_addresses=*"
       - "-c"
-      - "password_encryption=md5"
+      # Dev: md5. Production override: scram-sha-256
+      - "password_encryption=${PASSWORD_ENCRYPTION:-md5}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
+      # Dev: exposed on host for psql access. Production: bind to 127.0.0.1
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rikkei} -d ${POSTGRES_DB:-rikkei_docs}"]
@@ -65,6 +73,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     ports:
+      # Dev: exposed. Production: bind to 127.0.0.1
       - "${OLLAMA_PORT:-11434}:11434"
     environment:
       - OLLAMA_NUM_CTX=8192
@@ -81,11 +90,13 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      OLLAMA_HOST: http://ollama:11434
-      OLLAMA_MODEL: qwen2.5:7b
-      DATABASE_URL: postgresql://rikkei@postgres:5432/rikkei_docs
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rikkei}:${POSTGRES_PASSWORD:-rikkei_dev_password}@postgres:5432/${POSTGRES_DB:-rikkei_docs}
       STORAGE_URL: http://web:3000
       UPLOADS_DIR: /uploads
+      # CORS — whitelist production domain
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
     ports:
       - "${AI_PIPELINE_PORT:-8000}:8000"
     volumes:

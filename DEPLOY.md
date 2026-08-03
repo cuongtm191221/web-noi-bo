@@ -1,18 +1,20 @@
 # Rikkei Document Management — Deployment Guide
 
-Production deployment cho hệ thống quản lý tài liệu nội bộ.
+Production deployment cho hệ thống quản lý tài liệu nội bộ (~50 users, self-hosted).
+
+> **Updated 2026-08-04** — Plan 15 deploy. Sử dụng multi-stage Dockerfile, docker-compose.prod.yml overrides, Nginx + Let's Encrypt, và script `deploy.sh` tự động hoá.
 
 ## 🏗️ Production Architecture
 
 ```
                           ┌─────────────────┐
-                          │   Cloudflare    │
-                          │  (DNS + SSL)    │
+                          │   Cloudflare    │ (optional)
+                          │  (DNS + CDN)    │
                           └────────┬────────┘
                                    │
                           ┌────────▼────────┐
-                          │   Nginx (LB)    │
-                          │   + SSL term    │
+                          │   Nginx (LB)    │ Let's Encrypt SSL
+                          │   + security    │ rate limit, gzip
                           └────────┬────────┘
                                    │
               ┌────────────────────┼────────────────────┐
@@ -20,22 +22,20 @@ Production deployment cho hệ thống quản lý tài liệu nội bộ.
      ┌────────▼────────┐  ┌────────▼────────┐  ┌────────▼────────┐
      │  web (Next.js)  │  │ ai-pipeline     │  │  mcp-server     │
      │  Port 3000      │  │ (FastAPI)       │  │  (stdio)        │
-     │                 │  │ Port 8000       │  │                 │
+     │  standalone     │  │ Port 8000       │  │                 │
      └────────┬────────┘  └────────┬────────┘  └─────────────────┘
               │                    │
               └─────────┬──────────┘
                         │
               ┌─────────▼──────────┐
               │  Postgres 16       │
-              │  Port 5432         │
+              │  Port 5432 (local) │ scram-sha-256
               │  Persistent volume │
               └────────────────────┘
 
        ┌────────────────────┐
-       │  Ollama            │
-       │  (separate host)   │
-       │  Port 11434        │
-       │  GPU recommended   │
+       │  Ollama            │ CPU only (16GB+ RAM)
+       │  Port 11434 (local)│ profile: ai
        └────────────────────┘
 ```
 
@@ -43,311 +43,374 @@ Production deployment cho hệ thống quản lý tài liệu nội bộ.
 
 - **Server**: Linux (Ubuntu 22.04 LTS recommended)
 - **CPU**: 4 cores minimum (8 for AI + MCP)
-- **RAM**: 8GB minimum (16GB recommended)
-- **Disk**: 100GB+ (50GB for Ollama model, 20GB Postgres, 30GB uploads)
-- **GPU** (optional but recommended): NVIDIA GPU with 8GB+ VRAM
-- **Domain**: HTTPS required (Let's Encrypt or Cloudflare)
-- **DNS**: A record pointing to server IP
+- **RAM**: **16GB minimum** (qwen2.5:7b ~5GB + web + postgres)
+- **Disk**: 100GB+ SSD (20GB Postgres, 30GB uploads, 5GB Ollama, buffer cho backup)
+- **Domain**: HTTPS bắt buộc (Let's Encrypt miễn phí)
+- **DNS**: A record `@` và `www` trỏ về IP server
+- **VPS provider**: VNHOST, AZDIGI, Vinahost (Việt Nam) hoặc DO/Vultr/Hetzner (quốc tế)
 
-## 🚀 Deployment Steps
+## 🚀 Deployment Steps (lần đầu)
 
-### 1. Clone repo
-
-```bash
-git clone <repo-url>
-cd web-noi-bo
-```
-
-### 2. Configure environment
-
-Create production `.env`:
+### 1. Chuẩn bị VPS
 
 ```bash
-# Postgres
-POSTGRES_USER=rikkei
-POSTGRES_PASSWORD=<strong-random-password>
-POSTGRES_DB=rikkei_docs
+# SSH vào server (Ubuntu 22.04, 16GB RAM)
+ssh root@<IP_VPS>
 
-# Auth
-AUTH_SECRET=<32-char-random-string>  # openssl rand -base64 32
-AUTH_URL=https://your-domain.com
+# Update + cài Docker
+apt update && apt -y upgrade
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+apt install -y docker-compose-plugin
 
-# Next.js
-NEXT_PUBLIC_APP_URL=https://your-domain.com
-
-# MCP Server
-MCP_API_KEY=<32-char-random-string>  # openssl rand -base64 32
+# Verify
+docker --version
+docker compose version
 ```
 
-Generate secrets:
-```bash
-openssl rand -base64 32  # for AUTH_SECRET
-openssl rand -base64 32  # for MCP_API_KEY
-openssl rand -base64 16  # for POSTGRES_PASSWORD
-```
+### 2. Mua domain + trỏ DNS
 
-### 3. Update docker-compose.yml
+Ở nhà cung cấp domain (Namecheap, Tenten, Pavietnam, v.v.):
+- Tạo A record: `@` → `<IP_VPS>`
+- Tạo A record: `www` → `<IP_VPS>`
 
-Edit `docker-compose.yml` to add production overrides:
+Đợi 5-30 phút để DNS propagate. Test: `dig <DOMAIN>` (Linux) hoặc `nslookup <DOMAIN>` (Windows).
 
-```yaml
-services:
-  web:
-    environment:
-      - NODE_ENV=production
-      - NEXTAUTH_URL=${AUTH_URL}
-    restart: always
-
-  postgres:
-    environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: always
-
-  ai-pipeline:
-    environment:
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
-    restart: always
-```
-
-### 4. Start core services
+### 3. Clone repo
 
 ```bash
-docker compose up -d postgres web
+mkdir -p /opt && cd /opt
+git clone <repo-url> rikkei-docs
+cd rikkei-docs
 ```
 
-### 5. Run migrations + seed
+### 4. Generate secrets
 
 ```bash
+bash scripts/generate-secrets.sh
+# Output:
+#   POSTGRES_PASSWORD=xxxx
+#   AUTH_SECRET=xxxx
+#   MCP_API_KEY=xxxx
+```
+
+### 5. Tạo `.env.production`
+
+```bash
+cp .env.production.example .env.production
+nano .env.production   # điền DOMAIN, ADMIN_EMAIL, ADMIN_PASSWORD, và paste 3 secret từ bước 4
+```
+
+**Bắt buộc**:
+- `DOMAIN` = domain thật (vd `docs.rikkei.edu.vn`)
+- `NEXTAUTH_URL` = `https://${DOMAIN}`
+- `AUTH_SECRET` ≥ 32 chars
+- `POSTGRES_PASSWORD` ≥ 12 chars
+- `ADMIN_PASSWORD` ≥ 12 chars
+
+### 6. Cài Nginx + Let's Encrypt
+
+```bash
+apt install -y nginx certbot python3-certbot-nginx
+systemctl enable nginx
+```
+
+Cấu hình Nginx trước (để certbot có thể verify domain):
+
+```bash
+# Sửa DOMAIN trong file nginx config
+sed -i "s/DOMAIN_PLACEHOLDER/${DOMAIN}/g" nginx/rikkei.conf
+
+# Copy vào Nginx
+cp nginx/rikkei.conf /etc/nginx/sites-available/rikkei
+ln -sf /etc/nginx/sites-available/rikkei /etc/nginx/sites-enabled/rikkei
+rm -f /etc/nginx/sites-enabled/default
+
+# Test + reload
+nginx -t
+systemctl reload nginx
+```
+
+Issue SSL certificate:
+
+```bash
+certbot --nginx -d ${DOMAIN} -d www.${DOMAIN}
+# Chọn: redirect HTTP → HTTPS (option 2)
+```
+
+Cert sẽ tự động renew (systemd timer + certbot hook).
+
+### 7. Deploy
+
+```bash
+bash scripts/deploy.sh
+```
+
+Script sẽ tự động:
+1. Pull code mới nhất
+2. Build Docker image (multi-stage)
+3. Khởi động postgres + web
+4. Chạy `prisma migrate deploy`
+5. Seed admin user (idempotent)
+6. Verify `/api/health`
+7. Khởi động Ollama + AI pipeline (nếu `ENABLE_AI=true`)
+8. Khởi động MCP server (nếu `ENABLE_MCP=true`)
+
+### 8. Verify
+
+```bash
+# Health check
+curl -I https://${DOMAIN}
+curl https://${DOMAIN}/api/health
+# → {"status":"ok","db":"ok","uptime":42,"responseTimeMs":15,"timestamp":"..."}
+
+# Mở browser
+# → Login với ADMIN_EMAIL + ADMIN_PASSWORD
+# → Upload 1 file PDF nhỏ
+# → Status chuyển parsing → published
+
+# AI (nếu bật profile)
+docker exec rikkei-ollama ollama list  # check model đã pull
+# Upload file → đợi 5-30 phút (CPU only) → có summary + outline
+```
+
+### 9. Bật AI / MCP (optional)
+
+Sửa `.env.production`:
+```bash
+ENABLE_AI=true
+ENABLE_MCP=true   # optional
+```
+
+Sau đó:
+```bash
+bash scripts/deploy.sh
+```
+
+## 🔄 Re-deploy (cập nhật code)
+
+```bash
+cd /opt/rikkei-docs
+git pull
+bash scripts/deploy.sh
+```
+
+Script idempotent — an toàn chạy nhiều lần.
+
+## 💾 Backup
+
+### Manual (chạy từ host)
+
+```bash
+bash scripts/backup.sh
+# → /backups/rikkei-YYYYMMDD-HHMMSS.tar.gz (postgres + uploads + manifest)
+```
+
+### On-demand qua app UI
+
+Đăng nhập admin → **Admin → Backup** → click "Create backup". Action gọi `scripts/backup.js` trong container, retention 30 ngày.
+
+### Tự động (optional — thêm sau nếu cần)
+
+Tạo systemd timer:
+
+```bash
+cat > /etc/systemd/system/rikkei-backup.timer <<'EOF'
+[Unit]
+Description=Daily Rikkei backup
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+cat > /etc/systemd/system/rikkei-backup.service <<'EOF'
+[Unit]
+Description=Daily Rikkei backup
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/rikkei-docs
+ExecStart=/usr/bin/bash /opt/rikkei-docs/scripts/backup.sh
+EOF
+
+systemctl daemon-reload
+systemctl enable --now rikkei-backup.timer
+```
+
+Verify: `systemctl list-timers | grep rikkei`
+
+## 🔧 Useful commands
+
+```bash
+# Xem trạng thái
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+
+# Logs (real-time)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f web
+
+# Restart 1 service
+docker compose -f docker-compose.yml -f docker-compose.prod.yml restart web
+
+# Vào container
 docker exec -it rikkei-web sh
-cd apps/web
-npx prisma migrate deploy
-node scripts/seed.js
-exit
-```
 
-### 6. Start AI pipeline (optional)
+# Database CLI
+docker exec -it rikkei-postgres psql -U rikkei -d rikkei_docs
 
-```bash
-docker compose --profile ai up -d
-docker compose --profile ai exec ollama ollama pull qwen2.5:7b
-```
-
-### 7. Start MCP server (optional)
-
-```bash
-docker compose --profile mcp up -d mcp-server
-```
-
-### 8. Configure Nginx reverse proxy
-
-`/etc/nginx/sites-available/rikkei`:
-
-```nginx
-upstream rikkei_web {
-    server localhost:3000;
-}
-
-upstream rikkei_ai {
-    server localhost:8000;
-}
-
-server {
-    listen 80;
-    server_name your-domain.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name your-domain.com;
-
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-    # Web app
-    location / {
-        proxy_pass http://rikkei_web;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    # AI pipeline
-    location /api/ai/ {
-        proxy_pass http://rikkei_ai/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        client_max_body_size 50M;  # Allow large file uploads
-    }
-
-    # File uploads (50MB max)
-    client_max_body_size 50M;
-}
-```
-
-Enable:
-```bash
-sudo ln -s /etc/nginx/sites-available/rikkei /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-### 9. SSL with Let's Encrypt
-
-```bash
-sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d your-domain.com
-```
-
-### 10. Configure backups
-
-Postgres daily backup:
-```bash
-# /etc/cron.daily/rikkei-pg-backup
-docker exec rikkei-postgres pg_dump -U rikkei rikkei_docs | gzip > /backups/postgres-$(date +\%Y\%m\%d).sql.gz
-find /backups -name "postgres-*.sql.gz" -mtime +30 -delete
-```
-
-Uploads weekly backup:
-```bash
-# /etc/cron.weekly/rikkei-uploads-backup
-docker run --rm -v rikkei_uploads:/uploads -v /backups:/backup alpine tar czf /backup/uploads-$(date +\%Y\%m\%d).tar.gz -C /uploads .
-```
-
-## 🔧 Environment-Specific Notes
-
-### Ollama on separate host
-
-For GPU-powered LLM:
-```yaml
-  ai-pipeline:
-    environment:
-      - OLLAMA_HOST=http://ollama-gpu.internal:11434
-```
-
-### Scaling web (load balancer)
-
-Run multiple web instances behind Nginx:
-```yaml
-  web:
-    deploy:
-      replicas: 3
-```
-
-### MCP server exposed (rare)
-
-MCP uses stdio, but you can wrap with HTTP-SSE bridge:
-```bash
-docker run --rm -p 8765:8765 mcp-proxy --stdio "docker exec -i rikkei-mcp-server python -m server"
-```
-
-## 📊 Monitoring
-
-### Health checks
-
-```bash
-# Web
-curl -I https://your-domain.com
-
-# Postgres
-docker exec rikkei-postgres pg_isready -U rikkei
-
-# AI pipeline
-curl http://localhost:8000/health
-
-# Ollama
-curl http://localhost:11434/api/tags
-```
-
-### Logs
-
-```bash
-docker compose logs web --tail 100
-docker compose logs postgres --tail 100
-docker compose --profile ai logs ai-pipeline --tail 100
-```
-
-### Resource monitoring
-
-```bash
+# Resource usage
 docker stats
 ```
 
-## 🔐 Security Checklist
+## 🔐 Security Checklist (production)
 
-- [ ] HTTPS enabled (Let's Encrypt)
-- [ ] Strong passwords for Postgres
-- [ ] `AUTH_SECRET` randomly generated (32+ chars)
-- [ ] `MCP_API_KEY` not shared publicly
-- [ ] Postgres not exposed to public internet (only via Docker network)
-- [ ] Uploads dir not web-accessible (Nginx doesn't serve /uploads/)
-- [ ] Regular backups (Postgres + uploads)
-- [ ] Firewall: only 80/443 open
-- [ ] Non-root user in Docker (if possible)
+- [x] HTTPS enabled (Let's Encrypt, auto-renew)
+- [x] Strong `AUTH_SECRET` (32+ chars random)
+- [x] Strong `POSTGRES_PASSWORD` (12+ chars)
+- [x] `POSTGRES_HOST_AUTH_METHOD=scram-sha-256`
+- [x] Postgres bind 127.0.0.1 only (no public exposure)
+- [x] Ollama bind 127.0.0.1 only (no public exposure)
+- [x] NextAuth `trustHost: true` (works behind Nginx)
+- [x] Cookie `secure` flag in production
+- [x] Next.js standalone output (no dev source leak)
+- [x] Security headers (HSTS, X-Frame-Options, X-Content-Type-Options)
+- [x] `client_max_body_size 50M` (prevents DoS via huge uploads)
+- [x] Rate limiting on auth, change-password, user-create APIs
+- [x] Seed admin password from env (never hardcoded)
+- [x] Healthcheck endpoint at `/api/health`
+- [x] Resource limits per service (`mem_limit` in prod compose)
 
 ## 🚨 Disaster Recovery
 
-### Restore Postgres from backup
+### Restore Postgres từ backup
 
 ```bash
-gunzip -c /backups/postgres-YYYYMMDD.sql.gz | \
-  docker exec -i rikkei-postgres psql -U rikkei -d rikkei_docs
+# Từ file backup (.tar.gz đã có postgres.sql.gz bên trong)
+tar xzf rikkei-latest.tar.gz
+gunzip -c rikkei-*/postgres.sql.gz | docker exec -i rikkei-postgres psql -U rikkei -d rikkei_docs
 ```
 
 ### Restore uploads
 
 ```bash
-docker run --rm -v rikkei_uploads:/uploads -v /backups:/backup alpine \
-  tar xzf /backup/uploads-YYYYMMDD.tar.gz -C /uploads
+docker run --rm \
+  -v rikkei_uploads_data:/target \
+  -v /backups:/backup:ro \
+  alpine tar xzf /backup/rikkei-latest.tar.gz -C /target \
+  rikkei-*/uploads.tar.gz --strip-components=1
 ```
 
-### Reset everything
+(hoặc giải nén thủ công rồi copy)
+
+### Reset toàn bộ (⚠️ xoá data)
 
 ```bash
-docker compose down -v  # WARNING: deletes all data
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down -v
+bash scripts/deploy.sh
 ```
 
 ## 🆘 Troubleshooting
 
-### Web returns 500
-- Check logs: `docker compose logs web`
-- Verify Postgres reachable: `docker exec rikkei-postgres pg_isready`
-- Run migrations: see Step 5
+### Health check fails sau deploy
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml logs web | tail -50
+# Thường do:
+# - AUTH_SECRET chưa set / quá ngắn
+# - DATABASE_URL sai
+# - Postgres chưa healthy
+```
+
+### `certbot` fail
+
+```bash
+# Check DNS đã resolve chưa
+dig ${DOMAIN}
+# Check Nginx config
+nginx -t
+systemctl status nginx
+```
 
 ### AI pipeline timeout
-- Check Ollama: `docker exec rikkei-ollama ollama list`
-- Increase timeout in `apps/ai-pipeline/main.py` (default 600s)
 
-### Uploads fail
-- Check disk space: `df -h`
-- Check Nginx config: `client_max_body_size 50M`
+```bash
+# Check Ollama
+docker exec rikkei-ollama ollama list
 
-### Performance slow
-- Add more CPU to Ollama host (GPU recommended)
-- Increase Postgres shared_buffers (1/4 of RAM)
-- Enable Nginx gzip compression
+# Tăng timeout (mặc định 600s) — sửa apps/ai-pipeline/main.py:36
+OLLAMA_TIMEOUT = 1800  # 30 phút
+
+# Rebuild + restart
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build ai-pipeline
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d ai-pipeline
+```
+
+### Upload fail với file lớn
+
+Check Nginx:
+```bash
+grep client_max_body_size /etc/nginx/sites-available/rikkei
+# Phải là 50M (match next.config.ts serverActions.bodySizeLimit)
+```
+
+### Disk đầy
+
+```bash
+# Check backup dir
+du -sh /backups
+# Cleanup thủ công
+find /backups -name "rikkei-*.tar.gz" -mtime +30 -delete
+
+# Check uploads
+du -sh /var/lib/docker/volumes/rikkei_uploads_data
+```
+
+## 📊 Monitoring
+
+### Health endpoint (cho uptime monitor)
+
+```bash
+curl https://${DOMAIN}/api/health
+# Trả {status, db, uptime, responseTimeMs, timestamp}
+# HTTP 200 nếu OK, 503 nếu degraded
+```
+
+Có thể setup UptimeRobot / Betterstack / Healthchecks.io monitor endpoint này.
+
+### Resource monitoring
+
+```bash
+# Real-time
+docker stats
+
+# Disk
+df -h
+
+# Memory
+free -h
+
+# Logs
+journalctl -u nginx -f
+```
+
+### Backup verification
+
+```bash
+# Check backup mới nhất
+ls -lh /backups/rikkei-latest.tar.gz
+tar tzf /backups/rikkei-latest.tar.gz | head  # list contents
+```
 
 ## 📞 Support
 
-- Repo issues: https://github.com/your-org/rikkei-docs/issues
-- Internal Slack: #rikkei-docs
-- Email: dev@rikkei.edu.vn
+- Repo issues: liên hệ team dev Rikkei Education
+- Internal Slack: `#rikkei-docs`
+- Email: `dev@rikkei.edu.vn`
 
 ---
 
-**Last updated**: 2026-08-03
-**Applies to**: Plan 1-8 (all current plans)
+**Last updated**: 2026-08-04 (Plan 15)
+**Applies to**: Plan 1-14 + Plan 15 (deploy production)

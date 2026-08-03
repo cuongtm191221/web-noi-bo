@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logActivity } from '@/lib/activity';
 
 export async function PATCH(
   request: NextRequest,
@@ -29,6 +30,20 @@ export async function PATCH(
     where: { id },
     data,
     select: { id: true, email: true, name: true, role: true, deactivatedAt: true },
+  });
+
+  const action = body.deactivatedAt === 'now'
+    ? 'USER_DEACTIVATE'
+    : body.deactivatedAt === null
+    ? 'USER_REACTIVATE'
+    : 'USER_UPDATE';
+
+  void logActivity({
+    userId: session.user.id,
+    action,
+    entityType: 'user',
+    entityId: id,
+    metadata: { changes: Object.keys(data) },
   });
 
   return NextResponse.json({ user });

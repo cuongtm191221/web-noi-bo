@@ -256,13 +256,14 @@ function OutlineItem({
 }
 
 function LevelBadge({ level }: { level: number }) {
-  const colorMap: Record<number, { bg: string; label: string }> = {
+  const colorMap: Record<1 | 2 | 3 | 4, { bg: string; label: string }> = {
     1: { bg: '#0d226b', label: 'C' },
     2: { bg: '#005c9e', label: 'Đ' },
     3: { bg: '#009f4d', label: 'M' },
     4: { bg: '#6b7280', label: 'K' },
   };
-  const colors = colorMap[level] ?? colorMap[4];
+  const safeLevel: 1 | 2 | 3 | 4 = (level === 1 || level === 2 || level === 3 || level === 4) ? level : 4;
+  const colors = colorMap[safeLevel];
 
   return (
     <span style={{

@@ -360,7 +360,7 @@ export function UserManagement({ currentUserId }: { currentUserId: string }) {
 }
 
 function RoleBadge({ role }: { role: 'admin' | 'editor' | 'viewer' }) {
-  const colors: Record<string, { bg: string; label: string }> = {
+  const colors: Record<'admin' | 'editor' | 'viewer', { bg: string; label: string }> = {
     admin: { bg: '#0d226b', label: 'Admin' },
     editor: { bg: '#005c9e', label: 'Editor' },
     viewer: { bg: '#6b7280', label: 'Viewer' },
@@ -413,13 +413,25 @@ function EditUserModal({
     <Modal title="Sửa user" onClose={onClose}>
       {error && <ModalError msg={error} />}
       <Field label="Email">
-        <input value={user.email} disabled style={inputStyle(true)} />
+        <input value={user.email} disabled style={{
+          width: '100%', padding: '8px 12px',
+          border: '1px solid var(--color-border)', borderRadius: '6px',
+          fontSize: '14px', backgroundColor: '#f1f5f9',
+        }} />
       </Field>
       <Field label="Họ tên">
-        <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle()} />
+        <input value={name} onChange={(e) => setName(e.target.value)} style={{
+          width: '100%', padding: '8px 12px',
+          border: '1px solid var(--color-border)', borderRadius: '6px',
+          fontSize: '14px',
+        }} />
       </Field>
       <Field label="Vai trò">
-        <select value={role} onChange={(e) => setRole(e.target.value as User['role'])} style={inputStyle()}>
+        <select value={role} onChange={(e) => setRole(e.target.value as User['role'])} style={{
+          width: '100%', padding: '8px 12px',
+          border: '1px solid var(--color-border)', borderRadius: '6px',
+          fontSize: '14px',
+        }}>
           <option value="admin">Admin</option>
           <option value="editor">Editor</option>
           <option value="viewer">Viewer</option>
@@ -462,6 +474,12 @@ function CreateUserModal({
     }
   };
 
+  const inputSx: React.CSSProperties = {
+    width: '100%', padding: '8px 12px',
+    border: '1px solid var(--color-border)', borderRadius: '6px',
+    fontSize: '14px',
+  };
+
   return (
     <Modal title="Tạo user mới" onClose={onClose}>
       {error && <ModalError msg={error} />}
@@ -471,22 +489,22 @@ function CreateUserModal({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="teacher@rikkei.edu.vn"
-          style={inputStyle()}
+          style={inputSx}
         />
       </Field>
       <Field label="Họ tên">
-        <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle()} />
+        <input value={name} onChange={(e) => setName(e.target.value)} style={inputSx} />
       </Field>
       <Field label="Mật khẩu (tối thiểu 8 ký tự)">
         <input
           type="text"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={inputStyle()}
+          style={inputSx}
         />
       </Field>
       <Field label="Vai trò">
-        <select value={role} onChange={(e) => setRole(e.target.value as User['role'])} style={inputStyle()}>
+        <select value={role} onChange={(e) => setRole(e.target.value as User['role'])} style={inputSx}>
           <option value="admin">Admin</option>
           <option value="editor">Editor (giáo viên)</option>
           <option value="viewer">Viewer (chỉ xem)</option>
@@ -559,38 +577,29 @@ function ModalActions({
 }) {
   return (
     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
-      <button onClick={onClose} style={secondaryButtonStyle}>
+      <button
+        onClick={onClose}
+        style={{
+          padding: '8px 16px', backgroundColor: 'transparent',
+          color: 'var(--color-text-dark)', border: '1px solid var(--color-border)',
+          borderRadius: '6px', fontSize: '14px', cursor: 'pointer',
+        }}
+      >
         Hủy
       </button>
-      <button onClick={onSave} disabled={saving} style={primaryButtonStyle(saving)}>
+      <button
+        onClick={onSave}
+        disabled={saving}
+        style={{
+          padding: '8px 16px', backgroundColor: 'var(--color-primary)',
+          color: 'white', border: 'none', borderRadius: '6px',
+          fontSize: '14px', fontWeight: 500,
+          cursor: saving ? 'not-allowed' : 'pointer',
+          opacity: saving ? 0.6 : 1,
+        }}
+      >
         {saving ? 'Đang lưu...' : 'Lưu'}
       </button>
     </div>
   );
-}
-
-function inputStyle(disabled = false): React.CSSProperties {
-  return {
-    width: '100%', padding: '8px 12px',
-    border: '1px solid var(--color-border)', borderRadius: '6px',
-    fontSize: '14px', backgroundColor: disabled ? '#f1f5f9' : 'white',
-  };
-}
-
-function primaryButtonStyle(disabled: boolean): React.CSSProperties {
-  return {
-    padding: '8px 16px', backgroundColor: 'var(--color-primary)',
-    color: 'white', border: 'none', borderRadius: '6px',
-    fontSize: '14px', fontWeight: 500,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.6 : 1,
-  };
-}
-
-function secondaryButtonStyle(): React.CSSProperties {
-  return {
-    padding: '8px 16px', backgroundColor: 'transparent',
-    color: 'var(--color-text-dark)', border: '1px solid var(--color-border)',
-    borderRadius: '6px', fontSize: '14px', cursor: 'pointer',
-  };
 }

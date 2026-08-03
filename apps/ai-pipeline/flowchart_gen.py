@@ -125,16 +125,22 @@ def _sanitize_mermaid(syntax: str) -> str:
     syntax = re.sub(r'--\s*(Yes|No|Có|Không|True|False)\s*--', r'-->|\1|', syntax)
     # Remove trailing semicolons on lines
     syntax = re.sub(r';\s*$', '', syntax, flags=re.MULTILINE)
-    # Remove CJK chars (Chinese/Japanese/Korean) inside node labels — strip from [...], {...}, (...) contents
+    # Remove CJK chars + arrows + colons from labels — strip from [...], {...}, (...) contents
     def clean_label(match: re.Match) -> str:
         opener = match.group(1)
         label = match.group(2)
         closer = match.group(3)
-        # Strip CJK Unified Ideographs + Hangul + Hiragana/Katakana
-        cleaned = re.sub(r'[一-鿿぀-ゟ゠-ヿ가-힯]', '', label)
-        # Strip arrows/special chars that confuse mermaid: → ← ↑ ↓ ※ ❯
-        cleaned = re.sub(r'[→←↑↓※❯⇨]', '', cleaned)
-        if not cleaned.strip():
+        # Strip CJK chars (Chinese/Japanese/Korean) — Unicode range 4E00-9FFF, Hiragana/Katakana, Hangul
+        cleaned = re.sub(r'[　-〿一-鿿぀-ゟ゠-ヿ가-힯]', '', label)
+        # Strip arrows that confuse mermaid: → ← ↑ ↓ ※ ❯ ⇨
+        cleaned = re.sub(r'[→←↑↓※❯⇨⇒⇐]', ' ', cleaned)
+        # Replace ":" with " - " inside labels (mermaid parser breaks on colons)
+        cleaned = cleaned.replace(':', ' -')
+        # Strip any remaining double-quotes inside labels
+        cleaned = cleaned.replace('"', '').replace("'", '').replace('"', '').replace("'", '')
+        # Collapse whitespace
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        if not cleaned:
             cleaned = "Step"
         return f"{opener}{cleaned}{closer}"
 
