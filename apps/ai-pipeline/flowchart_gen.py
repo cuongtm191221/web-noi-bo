@@ -51,11 +51,25 @@ async def generate_flowchart(
 def _sanitize_mermaid(syntax: str) -> str:
     """Sanitize mermaid syntax to avoid parse errors.
 
-    - Strip surrounding double quotes inside node labels: ["Foo"] -> [Foo]
-    - Strip curly braces around node labels to prevent diamond+text issues: {Foo} -> (Foo)
+    - Strip quoted text in node labels: ["Foo"] -> [Foo]
+    - Strip quoted text in diamond shapes: {"Foo"} -> (Foo)
+    - Strip quoted text in edge labels: -- "label" --> --> -- label --> (still valid)
+    - Remove trailing semicolons (mermaid parse error)
+    - Replace semicolons inside node labels with commas
     """
     # Replace ["..."] with [...] — quoted text breaks mermaid parser
     syntax = re.sub(r'\[("([^"\\]|\\.)*")\]', r'[\2]', syntax)
+    syntax = re.sub(r'\[("([^"\\]|\\.)*")\s*\]', r'[\2]', syntax)
     # Replace {"..."} with (...) — quoted text in diamond shapes
     syntax = re.sub(r'\{\s*"([^"]*)"\s*\}', r'(\1)', syntax)
+    # Replace -- "label" --> with -- label --> (still valid mermaid)
+    syntax = re.sub(r'--\s*"([^"]*)"\s*--', r'-- \1 --', syntax)
+    # Replace |"label"| with |label| (edge labels)
+    syntax = re.sub(r'\|"([^"]*)"\|', r'|\1|', syntax)
+    # Replace ["..."] with [...] inside text (catch-all)
+    syntax = re.sub(r'\["([^"]*)"\]', r'[\1]', syntax)
+    # Remove trailing semicolons on each line (mermaid parse error)
+    syntax = re.sub(r';\s*$', '', syntax, flags=re.MULTILINE)
+    # Replace standalone ; inside node labels
+    syntax = re.sub(r'\[;\]', r'[]', syntax)
     return syntax
