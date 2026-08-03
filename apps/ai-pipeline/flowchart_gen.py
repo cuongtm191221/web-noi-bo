@@ -51,25 +51,25 @@ async def generate_flowchart(
 def _sanitize_mermaid(syntax: str) -> str:
     """Sanitize mermaid syntax to avoid parse errors.
 
-    - Strip quoted text in node labels: ["Foo"] -> [Foo]
-    - Strip quoted text in diamond shapes: {"Foo"} -> (Foo)
-    - Strip quoted text in edge labels: -- "label" --> --> -- label --> (still valid)
-    - Remove trailing semicolons (mermaid parse error)
-    - Replace semicolons inside node labels with commas
+    Strategy: convert any node label with quotes/punctuation to plain text
+    and keep only ASCII-safe characters.
     """
-    # Replace ["..."] with [...] — quoted text breaks mermaid parser
-    syntax = re.sub(r'\[("([^"\\]|\\.)*")\]', r'[\2]', syntax)
-    syntax = re.sub(r'\[("([^"\\]|\\.)*")\s*\]', r'[\2]', syntax)
-    # Replace {"..."} with (...) — quoted text in diamond shapes
-    syntax = re.sub(r'\{\s*"([^"]*)"\s*\}', r'(\1)', syntax)
-    # Replace -- "label" --> with -- label --> (still valid mermaid)
+    # Replace quoted edge labels: -- "label" --> -- label -->
+    syntax = re.sub(r'--\s*"([^"]*)"\s*-->', r'-- \1 -->', syntax)
     syntax = re.sub(r'--\s*"([^"]*)"\s*--', r'-- \1 --', syntax)
-    # Replace |"label"| with |label| (edge labels)
+    # Replace quoted pipe labels: |"label"| |label|
     syntax = re.sub(r'\|"([^"]*)"\|', r'|\1|', syntax)
-    # Replace ["..."] with [...] inside text (catch-all)
+    # Replace ["..."] node labels with [text]
     syntax = re.sub(r'\["([^"]*)"\]', r'[\1]', syntax)
-    # Remove trailing semicolons on each line (mermaid parse error)
-    syntax = re.sub(r';\s*$', '', syntax, flags=re.MULTILINE)
-    # Replace standalone ; inside node labels
+    # Replace {"..."} node labels with (text)
+    syntax = re.sub(r'\{"([^"]*)"\}', r'(\1)', syntax)
+    # Replace ("...")  node labels with (text)
+    syntax = re.sub(r'\("([^"]*)"\)', r'(\1)', syntax)
+    # Remove [;] empty labels
     syntax = re.sub(r'\[;\]', r'[]', syntax)
+    # Remove trailing semicolons on lines
+    syntax = re.sub(r';\s*$', '', syntax, flags=re.MULTILINE)
+    # Remove Vietnamese quotation marks “ ” (mermaid parser confuses them)
+    syntax = syntax.replace('“', '"').replace('”', '"')
+    syntax = syntax.replace("'", "'").replace("'", "'")
     return syntax
