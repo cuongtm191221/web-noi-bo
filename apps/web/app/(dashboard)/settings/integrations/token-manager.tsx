@@ -111,7 +111,7 @@ export function TokenManager() {
         <div style={{ display: 'flex', gap: '8px' }}>
           <input
             type="text"
-            placeholder="Tên token (vd: Claude Desktop)"
+            placeholder="Tên token (vd: Claude Desktop, VPS Agent)"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
@@ -121,7 +121,7 @@ export function TokenManager() {
             style={{
               flex: 1,
               padding: '8px 12px',
-              border: '1px solid var(--color-border)',
+              border: '1px solid var(--border-color)',
               borderRadius: '6px',
               fontSize: '14px',
             }}
@@ -131,7 +131,7 @@ export function TokenManager() {
             disabled={creating || !newName.trim()}
             style={{
               padding: '8px 16px',
-              backgroundColor: 'var(--color-primary)',
+              backgroundColor: 'var(--primary)',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -162,17 +162,17 @@ export function TokenManager() {
           Token hiện có ({tokens.length})
         </h2>
         {loading ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
             Đang tải...
           </div>
         ) : tokens.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '14px' }}>
+          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
             Chưa có token nào. Tạo token đầu tiên ở trên.
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
+              <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
                 <th style={{ padding: '8px', textAlign: 'left', fontWeight: 600 }}>Tên</th>
                 <th style={{ padding: '8px', textAlign: 'left', fontWeight: 600 }}>Prefix</th>
                 <th style={{ padding: '8px', textAlign: 'left', fontWeight: 600 }}>Tạo lúc</th>
@@ -182,15 +182,15 @@ export function TokenManager() {
             </thead>
             <tbody>
               {tokens.map((t) => (
-                <tr key={t.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <tr key={t.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '12px 8px', fontWeight: 500 }}>{t.name}</td>
-                  <td style={{ padding: '12px 8px', fontFamily: 'monospace', color: 'var(--color-text-muted)' }}>
+                  <td style={{ padding: '12px 8px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
                     {t.tokenPrefix}...
                   </td>
-                  <td style={{ padding: '12px 8px', color: 'var(--color-text-muted)' }}>
+                  <td style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>
                     {formatDate(t.createdAt)}
                   </td>
-                  <td style={{ padding: '12px 8px', color: 'var(--color-text-muted)' }}>
+                  <td style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>
                     {t.lastUsedAt ? formatDate(t.lastUsedAt) : '—'}
                   </td>
                   <td style={{ padding: '12px 8px', textAlign: 'right' }}>
@@ -227,11 +227,18 @@ function CreatedTokenModal({
   onClose: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
 
-  const config = JSON.stringify(
+  // Get the MCP endpoint URL - use current host
+  const mcpEndpoint = typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.host}:8765`
+    : 'http://your-vps-domain.com:8765';
+
+  // Generate Claude Desktop config for LOCAL development (docker exec)
+  const localConfig = JSON.stringify(
     {
       mcpServers: {
-        'rikkei-docs': {
+        'rikkei-docs-local': {
           command: 'docker',
           args: ['exec', '-i', 'rikkei-mcp-server', 'python', '-m', 'server'],
           env: {
@@ -244,7 +251,36 @@ function CreatedTokenModal({
     2,
   );
 
-  const copyAll = () => {
+  // Generate Claude Desktop config for REMOTE/VPS deployment (HTTP)
+  const remoteConfig = JSON.stringify(
+    {
+      mcpServers: {
+        'rikkei-docs': {
+          command: 'npx',
+          args: ['-y', '@anthropic/mcp-client-cli', 'http', mcpEndpoint],
+          env: {
+            MCP_TOKEN: created.plain,
+          },
+        },
+      },
+    },
+    null,
+    2,
+  );
+
+  // Simple curl command for testing
+  const curlCommand = `curl -X POST ${mcpEndpoint}/mcp \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${created.plain}" \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'`;
+
+  const copyToken = () => {
+    navigator.clipboard.writeText(created.plain);
+    setCopiedToken(true);
+    setTimeout(() => setCopiedToken(false), 2000);
+  };
+
+  const copyConfig = (config: string) => {
     navigator.clipboard.writeText(config);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -264,7 +300,7 @@ function CreatedTokenModal({
       <div style={{
         backgroundColor: 'white',
         borderRadius: '12px',
-        maxWidth: '600px',
+        maxWidth: '700px',
         width: '100%',
         maxHeight: '90vh',
         overflowY: 'auto',
@@ -282,7 +318,11 @@ function CreatedTokenModal({
           ⚠ Lưu token này ngay. Bạn sẽ không thể xem lại sau khi đóng hộp thoại này.
         </p>
 
+        {/* Token value */}
         <div style={{
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center',
           padding: '12px',
           backgroundColor: '#f8fafc',
           borderRadius: '6px',
@@ -291,30 +331,101 @@ function CreatedTokenModal({
           fontSize: '12px',
           wordBreak: 'break-all',
         }}>
-          {created.plain}
+          <span style={{ flex: 1 }}>{created.plain}</span>
+          <button
+            onClick={copyToken}
+            style={{
+              padding: '4px 8px',
+              backgroundColor: copiedToken ? '#009f4d' : 'var(--primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {copiedToken ? 'Đã copy!' : 'Copy'}
+          </button>
         </div>
 
+        {/* Remote/VPS Config */}
         <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600 }}>
-          Cấu hình Claude Desktop / Cursor
+          🔗 Cấu hình Remote (VPS Production)
         </h3>
-        <pre style={{
+        <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '8px' }}>
+          Dùng khi Claude Desktop ở máy khác kết nối tới VPS.
+        </p>
+        <div style={{
           backgroundColor: '#1e293b',
-          color: '#e2e8f0',
-          padding: '12px',
           borderRadius: '6px',
-          fontSize: '12px',
-          overflowX: 'auto',
-          marginBottom: '12px',
+          marginBottom: '16px',
+          overflow: 'hidden',
         }}>
-          {config}
-        </pre>
+          <pre style={{
+            color: '#e2e8f0',
+            padding: '12px',
+            fontSize: '11px',
+            overflowX: 'auto',
+            margin: 0,
+          }}>
+            {remoteConfig}
+          </pre>
+        </div>
+
+        {/* Curl command */}
+        <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600 }}>
+          🧪 Test bằng curl
+        </h3>
+        <div style={{
+          backgroundColor: '#1e293b',
+          borderRadius: '6px',
+          marginBottom: '16px',
+          overflow: 'hidden',
+        }}>
+          <pre style={{
+            color: '#e2e8f0',
+            padding: '12px',
+            fontSize: '11px',
+            overflowX: 'auto',
+            margin: 0,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all',
+          }}>
+            {curlCommand}
+          </pre>
+        </div>
+
+        {/* Local Config */}
+        <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600 }}>
+          💻 Cấu hình Local (Docker)
+        </h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '8px' }}>
+          Chỉ dùng khi Claude Desktop chạy trên cùng máy với Docker.
+        </p>
+        <div style={{
+          backgroundColor: '#1e293b',
+          borderRadius: '6px',
+          marginBottom: '16px',
+          overflow: 'hidden',
+        }}>
+          <pre style={{
+            color: '#e2e8f0',
+            padding: '12px',
+            fontSize: '11px',
+            overflowX: 'auto',
+            margin: 0,
+          }}>
+            {localConfig}
+          </pre>
+        </div>
 
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
           <button
-            onClick={copyAll}
+            onClick={() => copyConfig(remoteConfig)}
             style={{
               padding: '8px 16px',
-              backgroundColor: copied ? '#009f4d' : 'var(--color-primary)',
+              backgroundColor: copied ? '#009f4d' : 'var(--primary)',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -323,15 +434,15 @@ function CreatedTokenModal({
               cursor: 'pointer',
             }}
           >
-            {copied ? 'Đã copy!' : 'Copy config'}
+            {copied ? 'Đã copy config!' : 'Copy Remote Config'}
           </button>
           <button
             onClick={onClose}
             style={{
               padding: '8px 16px',
               backgroundColor: 'transparent',
-              color: 'var(--color-text-dark)',
-              border: '1px solid var(--color-border)',
+              color: 'var(--text-dark)',
+              border: '1px solid var(--border-color)',
               borderRadius: '6px',
               fontSize: '14px',
               cursor: 'pointer',
