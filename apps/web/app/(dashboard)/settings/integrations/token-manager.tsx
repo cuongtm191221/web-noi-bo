@@ -228,17 +228,22 @@ function CreatedTokenModal({
 }) {
   const [copied, setCopied] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
+  const [copiedSSH, setCopiedSSH] = useState(false);
+  const [copiedCurl, setCopiedCurl] = useState(false);
 
-  // Get the MCP endpoint URL - use current host
+  // Get the MCP endpoint URL
   const mcpEndpoint = typeof window !== 'undefined'
-    ? `${window.location.protocol}//${window.location.host}:8765`
-    : 'http://your-vps-domain.com:8765';
+    ? `${window.location.protocol}//${window.location.hostname}`
+    : 'https://your-domain.com';
 
-  // Generate Claude Desktop config for LOCAL development (docker exec)
-  const localConfig = JSON.stringify(
+  // SSH Tunnel command
+  const sshTunnelCommand = `ssh -L 8765:localhost:8765 -N user@${mcpEndpoint.replace('https://', '').replace('http://', '')}`;
+
+  // Generate Claude Desktop config - SSH tunnel (stdio mode via local proxy)
+  const sshTunnelConfig = JSON.stringify(
     {
       mcpServers: {
-        'rikkei-docs-local': {
+        'rikkei-docs': {
           command: 'docker',
           args: ['exec', '-i', 'rikkei-mcp-server', 'python', '-m', 'server'],
           env: {
@@ -251,25 +256,8 @@ function CreatedTokenModal({
     2,
   );
 
-  // Generate Claude Desktop config for REMOTE/VPS deployment (HTTP)
-  const remoteConfig = JSON.stringify(
-    {
-      mcpServers: {
-        'rikkei-docs': {
-          command: 'npx',
-          args: ['-y', '@anthropic/mcp-client-cli', 'http', mcpEndpoint],
-          env: {
-            MCP_TOKEN: created.plain,
-          },
-        },
-      },
-    },
-    null,
-    2,
-  );
-
-  // Simple curl command for testing
-  const curlCommand = `curl -X POST ${mcpEndpoint}/mcp \\
+  // Curl command for testing API
+  const curlCommand = `curl -X POST http://localhost:8765/mcp \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${created.plain}" \\
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'`;
@@ -280,10 +268,16 @@ function CreatedTokenModal({
     setTimeout(() => setCopiedToken(false), 2000);
   };
 
-  const copyConfig = (config: string) => {
-    navigator.clipboard.writeText(config);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copySSH = () => {
+    navigator.clipboard.writeText(sshTunnelCommand);
+    setCopiedSSH(true);
+    setTimeout(() => setCopiedSSH(false), 2000);
+  };
+
+  const copyCurl = () => {
+    navigator.clipboard.writeText(curlCommand);
+    setCopiedCurl(true);
+    setTimeout(() => setCopiedCurl(false), 2000);
   };
 
   return (
@@ -326,7 +320,7 @@ function CreatedTokenModal({
           padding: '12px',
           backgroundColor: '#f8fafc',
           borderRadius: '6px',
-          marginBottom: '16px',
+          marginBottom: '20px',
           fontFamily: 'monospace',
           fontSize: '12px',
           wordBreak: 'break-all',
@@ -349,17 +343,58 @@ function CreatedTokenModal({
           </button>
         </div>
 
-        {/* Remote/VPS Config */}
+        {/* SSH Tunnel Instructions */}
         <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600 }}>
-          🔗 Cấu hình Remote (VPS Production)
+          🔐 SSH Tunnel (Khuyến nghị)
         </h3>
         <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '8px' }}>
-          Dùng khi Claude Desktop ở máy khác kết nối tới VPS.
+          Claude Desktop cần MCP server chạy local (stdio). Dùng SSH tunnel để forward port từ VPS về máy local.
         </p>
         <div style={{
           backgroundColor: '#1e293b',
           borderRadius: '6px',
-          marginBottom: '16px',
+          marginBottom: '8px',
+          overflow: 'hidden',
+        }}>
+          <pre style={{
+            color: '#e2e8f0',
+            padding: '12px',
+            fontSize: '11px',
+            overflowX: 'auto',
+            margin: 0,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all',
+          }}>
+            {sshTunnelCommand}
+          </pre>
+        </div>
+        <button
+          onClick={copySSH}
+          style={{
+            padding: '6px 12px',
+            backgroundColor: copiedSSH ? '#009f4d' : 'var(--primary)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '12px',
+            cursor: 'pointer',
+            marginBottom: '20px',
+          }}
+        >
+          {copiedSSH ? 'Đã copy!' : 'Copy SSH Command'}
+        </button>
+
+        {/* Claude Desktop Config */}
+        <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600 }}>
+          💻 Cấu hình Claude Desktop
+        </h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '8px' }}>
+          Sau khi chạy SSH tunnel ở terminal, thêm config này vào Claude Desktop settings:
+        </p>
+        <div style={{
+          backgroundColor: '#1e293b',
+          borderRadius: '6px',
+          marginBottom: '20px',
           overflow: 'hidden',
         }}>
           <pre style={{
@@ -369,13 +404,13 @@ function CreatedTokenModal({
             overflowX: 'auto',
             margin: 0,
           }}>
-            {remoteConfig}
+            {sshTunnelConfig}
           </pre>
         </div>
 
-        {/* Curl command */}
+        {/* Curl Test */}
         <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600 }}>
-          🧪 Test bằng curl
+          🧪 Test bằng curl (sau khi có SSH tunnel)
         </h3>
         <div style={{
           backgroundColor: '#1e293b',
@@ -395,47 +430,23 @@ function CreatedTokenModal({
             {curlCommand}
           </pre>
         </div>
+        <button
+          onClick={copyCurl}
+          style={{
+            padding: '6px 12px',
+            backgroundColor: copiedCurl ? '#009f4d' : 'var(--primary)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '12px',
+            cursor: 'pointer',
+            marginBottom: '16px',
+          }}
+        >
+          {copiedCurl ? 'Đã copy!' : 'Copy Curl Command'}
+        </button>
 
-        {/* Local Config */}
-        <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600 }}>
-          💻 Cấu hình Local (Docker)
-        </h3>
-        <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '8px' }}>
-          Chỉ dùng khi Claude Desktop chạy trên cùng máy với Docker.
-        </p>
-        <div style={{
-          backgroundColor: '#1e293b',
-          borderRadius: '6px',
-          marginBottom: '16px',
-          overflow: 'hidden',
-        }}>
-          <pre style={{
-            color: '#e2e8f0',
-            padding: '12px',
-            fontSize: '11px',
-            overflowX: 'auto',
-            margin: 0,
-          }}>
-            {localConfig}
-          </pre>
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-          <button
-            onClick={() => copyConfig(remoteConfig)}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: copied ? '#009f4d' : 'var(--primary)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
-          >
-            {copied ? 'Đã copy config!' : 'Copy Remote Config'}
-          </button>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
           <button
             onClick={onClose}
             style={{
