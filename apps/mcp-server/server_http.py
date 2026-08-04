@@ -298,8 +298,14 @@ async def handle_call_tool(pool, name: str, arguments: dict) -> dict:
 # Auth dependency
 async def get_current_user(
     authorization: Optional[str] = Header(None),
+    x_user_id: Optional[str] = Header(None),
 ) -> str:
-    """Authenticate request via Bearer token."""
+    """Authenticate request via Bearer token or X-User-Id header (from proxy)."""
+    # If X-User-Id is passed (from Next.js API proxy), use it directly
+    if x_user_id:
+        return x_user_id
+
+    # Otherwise, verify Bearer token
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
 
