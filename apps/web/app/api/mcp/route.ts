@@ -2,20 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 
+// Use bracket notation because Prisma keeps snake_case model names
+const mcpTokens = prisma['mcp_tokens'] as any;
+
 async function verifyMcpToken(token: string): Promise<string | null> {
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-  const mcpToken = await prisma.mcpToken.findUnique({
-    where: { tokenHash },
-    select: { userId: true },
-  });
-
-  if (mcpToken) {
-    await prisma.mcpToken.update({
+  try {
+    const mcpToken = await mcpTokens.findUnique({
       where: { tokenHash },
-      data: { lastUsedAt: new Date() },
-    }).catch(() => {});
-    return mcpToken.userId;
+      select: { userId: true },
+    });
+
+    if (mcpToken) {
+      await mcpTokens.update({
+        where: { tokenHash },
+        data: { lastUsedAt: new Date() },
+      }).catch(() => {});
+      return mcpToken.userId;
+    }
+  } catch (e) {
+    console.error('Token verify error:', e);
   }
 
   return null;
@@ -69,26 +76,29 @@ async function handleListTools() {
 
 async function handleSearchDocuments(query: string, limit: number = 10) {
   try {
-    // Use Prisma with raw query
-    const documents = await prisma.$queryRaw<Array<{
-      id: string;
-      title: string;
-      content_text: string | null;
-    }>>`
-      SELECT id, title, LEFT(content_text, 200) as content_text
-      FROM documents
-      WHERE status = 'published'
-      AND (title ILIKE ${'%' + query + '%'} OR content_text ILIKE ${'%' + query + '%'})
-      ORDER BY updated_at DESC
-      LIMIT ${limit}
-    `;
+    const documents = await prisma.documents.findMany({
+      where: {
+        status: 'published',
+        OR: [
+          { title: { contains: query, mode: 'insensitive' } },
+          { description: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      take: limit,
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+      },
+    });
 
     if (!documents.length) {
       return `Không tìm thấy tài liệu nào cho từ khóa: ${query}`;
     }
 
     const results = documents.map((doc, i) =>
-      `[${i + 1}] ${doc.title}\n    ID: ${doc.id}\n    Snippet: ${doc.content_text || 'N/A'}...`
+      `[${i + 1}] ${doc.title}\n    ID: ${doc.id}\n    Description: ${doc.description || 'N/A'}...`
     ).join('\n\n');
 
     return `Tìm thấy ${documents.length} tài liệu:\n\n${results}`;
@@ -100,14 +110,14 @@ async function handleSearchDocuments(query: string, limit: number = 10) {
 
 async function handleGetDocument(docId: string) {
   try {
-    const doc = await prisma.document.findUnique({
+    const doc = await prisma.documents.findUnique({
       where: { id: docId },
       include: {
-        category: { select: { name: true } },
-        chunks: {
-          orderBy: { pageNumber: 'asc' },
+        categories: { select: { name: true } },
+        document_chunks: {
+          orderBy: { chunkIndex: 'asc' },
           take: 5,
-          select: { pageNumber: true, contentText: true },
+          select: { chunkIndex: true, text: true, pageNumber: true },
         },
       },
     });
@@ -120,16 +130,16 @@ async function handleGetDocument(docId: string) {
       `Tài liệu: ${doc.title}`,
       `ID: ${doc.id}`,
       `Trạng thái: ${doc.status}`,
-      `Danh mục: ${doc.category?.name || 'N/A'}`,
+      `Danh mục: ${doc.categories?.name || 'N/A'}`,
       `Tạo: ${doc.createdAt}`,
       `Cập nhật: ${doc.updatedAt}`,
       ``,
-      `Nội dung (${doc.chunks.length} phần đầu):`,
+      `Nội dung (${doc.document_chunks.length} phần đầu):`,
     ];
 
-    for (const chunk of doc.chunks) {
-      const text = chunk.contentText.length > 500 ? chunk.contentText.slice(0, 500) + '...' : chunk.contentText;
-      result.push(`\n--- Phần ${chunk.pageNumber} ---`);
+    for (const chunk of doc.document_chunks) {
+      const text = chunk.text.length > 500 ? chunk.text.slice(0, 500) + '...' : chunk.text;
+      result.push(`\n--- Phần ${chunk.pageNumber || chunk.chunkIndex} ---`);
       result.push(text);
     }
 
@@ -142,7 +152,7 @@ async function handleGetDocument(docId: string) {
 
 async function handleListCategories() {
   try {
-    const categories = await prisma.category.findMany({
+    const categories = await prisma.categories.findMany({
       include: {
         _count: {
           select: { documents: { where: { status: 'published' } } },
@@ -166,7 +176,7 @@ async function handleListCategories() {
 
 async function handleGetSummary(docId: string) {
   try {
-    const summary = await prisma.documentSummary.findUnique({
+    const summary = await prisma.document_summaries.findUnique({
       where: { documentId: docId },
     });
 
@@ -176,14 +186,14 @@ async function handleGetSummary(docId: string) {
 
     return [
       "=== TÓM TẮT ===",
-      summary.executiveSummary || "Không có tóm tắt.",
+      summary.executive_summary || "Không có tóm tắt.",
       "",
       "=== CHECKLIST ===",
-      summary.checklist || "Không có checklist.",
+      JSON.stringify(summary.checklist || "Không có checklist."),
       "",
       "=== FLOWCHART ===",
       "```mermaid",
-      summary.flowchartMermaid || "# Không có flowchart",
+      summary.mermaid_syntax || "# Không có flowchart",
       "```",
     ].join('\n');
   } catch (error) {
