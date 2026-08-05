@@ -4,29 +4,35 @@ import { useState, useCallback } from 'react';
 import { ProcessingStatus } from './processing-status';
 import { SummaryTab } from './summary-tab';
 import { OutlineTab } from './outline-tab';
-import { CitationTab } from './citation-tab';
 import { DocumentContent } from './document-content';
 
 type Props = {
   documentId: string;
   format: 'pdf' | 'docx' | 'pptx' | 'xlsx' | 'md' | 'txt';
   hasSummary: boolean;
-  hasFlowchart: boolean;
-  hasCitations: boolean;
+  hasOutline: boolean;
+  canEdit: boolean;
+  userRole: 'admin' | 'editor' | 'viewer';
 };
 
-type Tab = 'viewer' | 'summary' | 'outline' | 'citation';
+type Tab = 'viewer' | 'summary' | 'outline';
 
-export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, hasCitations }: Props) {
+export function DocumentViewer({
+  documentId,
+  format,
+  hasSummary,
+  hasOutline,
+  canEdit,
+  userRole,
+}: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('viewer');
   const [status, setStatus] = useState({
     hasSummary,
-    hasFlowchart,
-    hasCitations,
+    hasOutline,
   });
   const [highlightPage, setHighlightPage] = useState<number | undefined>(undefined);
 
-  const handleStatusUpdate = useCallback((s: { hasSummary: boolean; hasFlowchart: boolean; hasCitations: boolean }) => {
+  const handleStatusUpdate = useCallback((s: { hasSummary: boolean; hasOutline: boolean }) => {
     setStatus(s);
   }, []);
 
@@ -56,8 +62,7 @@ export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, h
       <ProcessingStatus
         documentId={documentId}
         initialHasSummary={hasSummary}
-        initialHasFlowchart={hasFlowchart}
-        initialHasCitations={hasCitations}
+        initialHasOutline={hasOutline}
         onUpdate={handleStatusUpdate}
       />
 
@@ -86,19 +91,11 @@ export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, h
         </button>
         <button
           onClick={() => setActiveTab('outline')}
-          disabled={!status.hasFlowchart}
-          style={tabStyle(activeTab === 'outline', !status.hasFlowchart)}
-          title={status.hasFlowchart ? '' : 'Đang xử lý AI...'}
+          disabled={!status.hasOutline}
+          style={tabStyle(activeTab === 'outline', !status.hasOutline)}
+          title={status.hasOutline ? '' : 'Đang xử lý AI...'}
         >
           Mục lục
-        </button>
-        <button
-          onClick={() => setActiveTab('citation')}
-          disabled={!status.hasCitations}
-          style={tabStyle(activeTab === 'citation', !status.hasCitations)}
-          title={status.hasCitations ? '' : 'Đang xử lý AI...'}
-        >
-          Trích dẫn
         </button>
       </div>
 
@@ -106,12 +103,8 @@ export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, h
         <SummaryTab documentId={documentId} />
       )}
 
-      {activeTab === 'outline' && status.hasFlowchart && (
+      {activeTab === 'outline' && status.hasOutline && (
         <OutlineTab documentId={documentId} onNodeClick={handleCitationClick} />
-      )}
-
-      {activeTab === 'citation' && status.hasCitations && (
-        <CitationTab documentId={documentId} onCitationClick={handleCitationClick} />
       )}
 
       {activeTab === 'viewer' && (
@@ -144,7 +137,7 @@ export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, h
         </div>
       )}
 
-      {activeTab === 'outline' && !status.hasFlowchart && (
+      {activeTab === 'outline' && !status.hasOutline && (
         <div style={{
           backgroundColor: 'white',
           borderRadius: '8px',
@@ -163,28 +156,6 @@ export function DocumentViewer({ documentId, format, hasSummary, hasFlowchart, h
             marginRight: '8px',
           }} />
           Đang trích xuất mục lục...
-        </div>
-      )}
-
-      {activeTab === 'citation' && !status.hasCitations && (
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          padding: '32px',
-          textAlign: 'center',
-          color: 'var(--color-text-muted)',
-        }}>
-          <span style={{
-            display: 'inline-block',
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: '#1e40af',
-            animation: 'pulse 1.5s ease-in-out infinite',
-            marginRight: '8px',
-          }} />
-          AI đang tạo trích dẫn, vui lòng đợi...
         </div>
       )}
     </>

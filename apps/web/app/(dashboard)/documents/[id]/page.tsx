@@ -21,7 +21,8 @@ export default async function DocumentViewerPage({
       uploader: { select: { name: true, email: true } },
       category: true,
       summary: { select: { id: true } },
-      flowchart: { select: { id: true } },
+      outline: { select: { id: true } },
+      diagram: { select: { id: true } },
     },
   });
 
@@ -29,7 +30,10 @@ export default async function DocumentViewerPage({
     notFound();
   }
 
-  const canEdit = session?.user?.id && (doc.uploaderId === session.user.id || session.user.role === 'admin');
+  const userRole = session?.user?.role;
+  const canEdit =
+    !!session?.user?.id &&
+    (userRole === 'admin' || userRole === 'editor' || doc.uploaderId === session.user.id);
 
   return (
     <div>
@@ -101,8 +105,9 @@ export default async function DocumentViewerPage({
         documentId={doc.id}
         format={doc.format as 'pdf' | 'docx' | 'pptx' | 'xlsx' | 'md' | 'txt'}
         hasSummary={!!doc.summary}
-        hasFlowchart={!!doc.flowchart}
-        hasCitations={false}
+        hasOutline={!!doc.outline}
+        canEdit={canEdit}
+        userRole={(userRole as 'admin' | 'editor' | 'viewer' | undefined) ?? 'viewer'}
       />
     </div>
   );

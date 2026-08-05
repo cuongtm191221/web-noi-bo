@@ -41,6 +41,7 @@ model User {
   updatedAt     DateTime @updatedAt @map("updated_at")
   deactivatedAt DateTime? @map("deactivated_at")
   documents     Document[]
+  diagrams      DocumentDiagram[]
   mcpTokens     McpToken[]
   activities    Activity[]
   notifications Notification[]
@@ -127,7 +128,8 @@ model Document {
   updatedAt   DateTime       @updatedAt @map("updated_at")
 
   summary    DocumentSummary?
-  flowchart  DocumentFlowchart?
+  diagram    DocumentDiagram?
+  outline    DocumentOutline?
   chunks     DocumentChunk[]
   citations  Citation[]
 
@@ -151,14 +153,32 @@ model DocumentSummary {
   @@map("document_summaries")
 }
 
-model DocumentFlowchart {
-  id           String   @id @default(cuid())
-  documentId   String   @unique @map("document_id")
-  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  mermaidSyntax String  @db.Text @map("mermaid_syntax")
-  createdAt    DateTime @default(now()) @map("created_at")
+model DocumentDiagram {
+  id              String   @id @default(cuid())
+  documentId      String   @unique @map("document_id")
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  @@map("document_flowcharts")
+  diagramJson     Json     @map("diagram_json")
+  diagramVersion  Int      @default(0) @map("diagram_version")
+  updatedById     String?  @map("updated_by_id")
+  updatedBy       User?    @relation(fields: [updatedById], references: [id])
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("document_diagrams")
+}
+
+model DocumentOutline {
+  id            String   @id @default(cuid())
+  documentId    String   @unique @map("document_id")
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  outlineJson   Json     @map("outline_json")
+  modelUsed     String   @map("model_used")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("document_outlines")
 }
 
 model DocumentChunk {

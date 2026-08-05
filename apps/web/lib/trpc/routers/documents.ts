@@ -14,7 +14,7 @@ export const documentsRouter = createTRPCRouter({
           id: true,
           status: true,
           summary: { select: { id: true, createdAt: true } },
-          flowchart: { select: { id: true, createdAt: true } },
+          outline: { select: { id: true, updatedAt: true } },
           _count: { select: { chunks: true, citations: true } },
         },
       });
@@ -22,7 +22,7 @@ export const documentsRouter = createTRPCRouter({
       return {
         status: doc.status,
         hasSummary: !!doc.summary,
-        hasFlowchart: !!doc.flowchart,
+        hasOutline: !!doc.outline,
         chunkCount: doc._count.chunks,
         citationCount: doc._count.citations,
       };
@@ -68,7 +68,7 @@ export const documentsRouter = createTRPCRouter({
       if (!doc) throw new TRPCError({ code: 'NOT_FOUND' });
       return doc;
     }),
-  getFlowchart: protectedProcedure
+  getOutline: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
       const doc = await prisma.document.findUnique({
@@ -76,9 +76,9 @@ export const documentsRouter = createTRPCRouter({
         select: {
           id: true,
           title: true,
-          flowchart: {
+          outline: {
             select: {
-              mermaidSyntax: true,
+              outlineJson: true,
               createdAt: true,
             },
           },

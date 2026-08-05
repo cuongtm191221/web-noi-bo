@@ -69,20 +69,23 @@ async def save_summary(document_id: str, summary: Dict[str, Any], model: str) ->
         )
 
 
-async def save_flowchart(document_id: str, mermaid: str) -> None:
+async def save_outline(document_id: str, outline: List[Dict[str, Any]], model: str) -> None:
+    """Save heading-based outline tree to document_outlines table (Plan 16 split)."""
     pool = await get_pool()
     async with pool.acquire() as conn:
         await conn.execute(
             """
-            INSERT INTO document_flowcharts
-            (id, document_id, mermaid_syntax, created_at)
-            VALUES (gen_random_uuid()::text, $1, $2, NOW())
+            INSERT INTO document_outlines
+            (id, document_id, outline_json, model_used, created_at, updated_at)
+            VALUES (gen_random_uuid()::text, $1, $2, $3, NOW(), NOW())
             ON CONFLICT (document_id) DO UPDATE SET
-              mermaid_syntax = EXCLUDED.mermaid_syntax,
-              created_at = NOW()
+              outline_json = EXCLUDED.outline_json,
+              model_used = EXCLUDED.model_used,
+              updated_at = NOW()
             """,
             document_id,
-            mermaid,
+            json.dumps(outline, ensure_ascii=False),
+            model,
         )
 
 

@@ -11,11 +11,10 @@ from datetime import datetime
 from parsers import parse_pdf, parse_docx, parse_pptx, parse_xlsx, parse_md
 from chunker import chunk_document
 from summarizer import summarize_chunks
-from flowchart_gen import generate_flowchart
 from db import (
     save_chunks,
     save_summary,
-    save_flowchart,
+    save_outline,
     save_citations,
     update_document_status,
 )
@@ -149,16 +148,15 @@ async def _process_pipeline(document_id: str, storage_path: str, format: str):
             logger.error(f"[{document_id}] citations failed: {e}")
             traceback.print_exc()
 
-        # 6. Outline (heading extraction — replaces LLM flowchart)
+        # 6. Outline (heading extraction — Plan 16 split from flowchart)
         try:
             logger.info(f"[{document_id}] step=outline extraction")
             from extract_headings import extract_headings, build_outline_tree
             headings = extract_headings(chunks)
             outline = build_outline_tree(headings)
             logger.info(f"[{document_id}] extracted {len(headings)} headings")
-            # Save outline as JSON in document_flowcharts table (mermaidSyntax field)
-            import json
-            await save_flowchart(document_id, json.dumps(outline, ensure_ascii=False))
+            await save_outline(document_id, outline, OLLAMA_MODEL)
+            logger.info(f"[{document_id}] outline saved")
         except Exception as e:
             logger.error(f"[{document_id}] outline extraction failed: {e}")
             traceback.print_exc()

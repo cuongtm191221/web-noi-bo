@@ -33,7 +33,7 @@ export function ProcessingStatus({
     if (data) {
       onUpdate({
         hasSummary: data.hasSummary,
-        hasFlowchart: data.hasFlowchart,
+        hasFlowchart: data.hasOutline,
         hasCitations: data.citationCount > 0,
       });
     }

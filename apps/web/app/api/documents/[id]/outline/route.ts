@@ -12,20 +12,16 @@ export async function GET(
   }
 
   const { id } = await params;
-  const flowchart = await prisma.documentFlowchart.findUnique({
+  const outline = await prisma.documentOutline.findUnique({
     where: { documentId: id },
-    select: { mermaidSyntax: true },
+    select: { outlineJson: true },
   });
 
-  if (!flowchart?.mermaidSyntax) {
+  if (!outline?.outlineJson) {
     return NextResponse.json({ outline: [] });
   }
 
-  // mermaidSyntax field now stores JSON outline tree
-  try {
-    const outline = JSON.parse(flowchart.mermaidSyntax);
-    return NextResponse.json({ outline });
-  } catch {
-    return NextResponse.json({ outline: [] });
-  }
+  // outlineJson is stored as JSONB (already parsed by Prisma)
+  const tree = Array.isArray(outline.outlineJson) ? outline.outlineJson : [];
+  return NextResponse.json({ outline: tree });
 }
