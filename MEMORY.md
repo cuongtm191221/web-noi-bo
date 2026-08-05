@@ -1,0 +1,1 @@
+- [MCP Server Lessons](docs/mcp-lessons-learned.md) — Prisma snake_case pitfalls, transport type, template
