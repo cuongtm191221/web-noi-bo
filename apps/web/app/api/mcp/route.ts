@@ -10,16 +10,16 @@ async function verifyMcpToken(token: string): Promise<string | null> {
 
   try {
     const mcpToken = await mcpTokens.findUnique({
-      where: { tokenHash },
-      select: { userId: true },
+      where: { token_hash: tokenHash },
+      select: { user_id: true },
     });
 
     if (mcpToken) {
       await mcpTokens.update({
-        where: { tokenHash },
-        data: { lastUsedAt: new Date() },
+        where: { token_hash: tokenHash },
+        data: { last_used_at: new Date() },
       }).catch(() => {});
-      return mcpToken.userId;
+      return mcpToken.user_id;
     }
   } catch (e) {
     console.error('Token verify error:', e);
@@ -85,7 +85,7 @@ async function handleSearchDocuments(query: string, limit: number = 10) {
         ],
       },
       take: limit,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updated_at: 'desc' },
       select: {
         id: true,
         title: true,
@@ -115,9 +115,9 @@ async function handleGetDocument(docId: string) {
       include: {
         categories: { select: { name: true } },
         document_chunks: {
-          orderBy: { chunkIndex: 'asc' },
+          orderBy: { chunk_index: 'asc' },
           take: 5,
-          select: { chunkIndex: true, text: true, pageNumber: true },
+          select: { chunk_index: true, text: true, page_number: true },
         },
       },
     });
@@ -131,15 +131,15 @@ async function handleGetDocument(docId: string) {
       `ID: ${doc.id}`,
       `Trạng thái: ${doc.status}`,
       `Danh mục: ${doc.categories?.name || 'N/A'}`,
-      `Tạo: ${doc.createdAt}`,
-      `Cập nhật: ${doc.updatedAt}`,
+      `Tạo: ${doc.created_at}`,
+      `Cập nhật: ${doc.updated_at}`,
       ``,
       `Nội dung (${doc.document_chunks.length} phần đầu):`,
     ];
 
     for (const chunk of doc.document_chunks) {
       const text = chunk.text.length > 500 ? chunk.text.slice(0, 500) + '...' : chunk.text;
-      result.push(`\n--- Phần ${chunk.pageNumber || chunk.chunkIndex} ---`);
+      result.push(`\n--- Phần ${chunk.page_number || chunk.chunk_index} ---`);
       result.push(text);
     }
 
@@ -177,7 +177,7 @@ async function handleListCategories() {
 async function handleGetSummary(docId: string) {
   try {
     const summary = await prisma.document_summaries.findUnique({
-      where: { documentId: docId },
+      where: { document_id: docId },
     });
 
     if (!summary) {
