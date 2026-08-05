@@ -11,7 +11,6 @@ async function verifyMcpToken(token: string): Promise<string | null> {
   });
 
   if (mcpToken) {
-    // Update last used
     await prisma.mcpToken.update({
       where: { tokenHash },
       data: { lastUsedAt: new Date() },
@@ -68,109 +67,129 @@ async function handleListTools() {
   };
 }
 
-async function handleSearch(pool: any, query: string, limit: number = 10) {
-  const rows = await pool.query(
-    `SELECT id, title, LEFT(content_text, 200) as snippet
-     FROM documents
-     WHERE status = 'published'
-     AND (title ILIKE $1 OR content_text ILIKE $1)
-     ORDER BY updated_at DESC
-     LIMIT $2`,
-    [`%${query}%`, limit]
-  );
+async function handleSearchDocuments(query: string, limit: number = 10) {
+  try {
+    // Use Prisma with raw query
+    const documents = await prisma.$queryRaw<Array<{
+      id: string;
+      title: string;
+      content_text: string | null;
+    }>>`
+      SELECT id, title, LEFT(content_text, 200) as content_text
+      FROM documents
+      WHERE status = 'published'
+      AND (title ILIKE ${'%' + query + '%'} OR content_text ILIKE ${'%' + query + '%'})
+      ORDER BY updated_at DESC
+      LIMIT ${limit}
+    `;
 
-  if (!rows.rows.length) {
-    return `Không tìm thấy tài liệu nào cho từ khóa: ${query}`;
+    if (!documents.length) {
+      return `Không tìm thấy tài liệu nào cho từ khóa: ${query}`;
+    }
+
+    const results = documents.map((doc, i) =>
+      `[${i + 1}] ${doc.title}\n    ID: ${doc.id}\n    Snippet: ${doc.content_text || 'N/A'}...`
+    ).join('\n\n');
+
+    return `Tìm thấy ${documents.length} tài liệu:\n\n${results}`;
+  } catch (error) {
+    console.error('Search error:', error);
+    return `Lỗi tìm kiếm: ${error}`;
   }
-
-  const results = rows.rows.map((row: any, i: number) =>
-    `[${i + 1}] ${row.title}\n    ID: ${row.id}\n    Snippet: ${row.snippet}...`
-  ).join('\n\n');
-
-  return `Tìm thấy ${rows.rows.length} tài liệu:\n\n${results}`;
 }
 
-async function handleGetDocument(pool: any, docId: string) {
-  const doc = await pool.query(
-    `SELECT d.*, c.name as category_name
-     FROM documents d
-     LEFT JOIN categories c ON d.category_id = c.id
-     WHERE d.id = $1`,
-    [docId]
-  );
+async function handleGetDocument(docId: string) {
+  try {
+    const doc = await prisma.document.findUnique({
+      where: { id: docId },
+      include: {
+        category: { select: { name: true } },
+        chunks: {
+          orderBy: { pageNumber: 'asc' },
+          take: 5,
+          select: { pageNumber: true, contentText: true },
+        },
+      },
+    });
 
-  if (!doc.rows.length) {
-    return `Không tìm thấy tài liệu với ID: ${docId}`;
+    if (!doc) {
+      return `Không tìm thấy tài liệu với ID: ${docId}`;
+    }
+
+    let result = [
+      `Tài liệu: ${doc.title}`,
+      `ID: ${doc.id}`,
+      `Trạng thái: ${doc.status}`,
+      `Danh mục: ${doc.category?.name || 'N/A'}`,
+      `Tạo: ${doc.createdAt}`,
+      `Cập nhật: ${doc.updatedAt}`,
+      ``,
+      `Nội dung (${doc.chunks.length} phần đầu):`,
+    ];
+
+    for (const chunk of doc.chunks) {
+      const text = chunk.contentText.length > 500 ? chunk.contentText.slice(0, 500) + '...' : chunk.contentText;
+      result.push(`\n--- Phần ${chunk.pageNumber} ---`);
+      result.push(text);
+    }
+
+    return result.join('\n');
+  } catch (error) {
+    console.error('Get document error:', error);
+    return `Lỗi lấy tài liệu: ${error}`;
   }
-
-  const d = doc.rows[0];
-  const chunks = await pool.query(
-    `SELECT page_number, content_text FROM document_chunks WHERE document_id = $1 ORDER BY page_number LIMIT 5`,
-    [docId]
-  );
-
-  let result = [
-    `Tài liệu: ${d.title}`,
-    `ID: ${d.id}`,
-    `Trạng thái: ${d.status}`,
-    `Danh mục: ${d.category_name || 'N/A'}`,
-    `Tạo: ${d.created_at}`,
-    `Cập nhật: ${d.updated_at}`,
-    ``,
-    `Nội dung (${chunks.rows.length} phần đầu):`,
-  ];
-
-  for (const chunk of chunks.rows) {
-    const text = chunk.content_text.length > 500 ? chunk.content_text.slice(0, 500) + '...' : chunk.content_text;
-    result.push(`\n--- Phần ${chunk.page_number} ---`);
-    result.push(text);
-  }
-
-  return result.join('\n');
 }
 
-async function handleListCategories(pool: any) {
-  const rows = await pool.query(
-    `SELECT c.id, c.name, c.color, COUNT(d.id) as doc_count
-     FROM categories c
-     LEFT JOIN documents d ON c.id = d.category_id AND d.status = 'published'
-     GROUP BY c.id, c.name, c.color
-     ORDER BY c.name`
-  );
+async function handleListCategories() {
+  try {
+    const categories = await prisma.category.findMany({
+      include: {
+        _count: {
+          select: { documents: { where: { status: 'published' } } },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
 
-  if (!rows.rows.length) {
-    return "Chưa có danh mục nào.";
+    if (!categories.length) {
+      return "Chưa có danh mục nào.";
+    }
+
+    return categories.map(c =>
+      `- [${c.color || '#666'}] ${c.name}: ${c._count.documents} tài liệu`
+    ).join('\n');
+  } catch (error) {
+    console.error('List categories error:', error);
+    return `Lỗi lấy danh mục: ${error}`;
   }
-
-  return rows.rows.map((r: any) =>
-    `- [${r.color || '#666'}] ${r.name}: ${r.doc_count} tài liệu`
-  ).join('\n');
 }
 
-async function handleGetSummary(pool: any, docId: string) {
-  const summary = await pool.query(
-    `SELECT executive_summary, checklist, flowchart_mermaid
-     FROM document_summaries WHERE document_id = $1`,
-    [docId]
-  );
+async function handleGetSummary(docId: string) {
+  try {
+    const summary = await prisma.documentSummary.findUnique({
+      where: { documentId: docId },
+    });
 
-  if (!summary.rows.length) {
-    return `Tài liệu ${docId} chưa có tóm tắt.`;
+    if (!summary) {
+      return `Tài liệu ${docId} chưa có tóm tắt.`;
+    }
+
+    return [
+      "=== TÓM TẮT ===",
+      summary.executiveSummary || "Không có tóm tắt.",
+      "",
+      "=== CHECKLIST ===",
+      summary.checklist || "Không có checklist.",
+      "",
+      "=== FLOWCHART ===",
+      "```mermaid",
+      summary.flowchartMermaid || "# Không có flowchart",
+      "```",
+    ].join('\n');
+  } catch (error) {
+    console.error('Get summary error:', error);
+    return `Lỗi lấy tóm tắt: ${error}`;
   }
-
-  const s = summary.rows[0];
-  return [
-    "=== TÓM TẮT ===",
-    s.executive_summary || "Không có tóm tắt.",
-    "",
-    "=== CHECKLIST ===",
-    s.checklist || "Không có checklist.",
-    "",
-    "=== FLOWCHART ===",
-    "```mermaid",
-    s.flowchart_mermaid || "# Không có flowchart",
-    "```",
-  ].join('\n');
 }
 
 export async function POST(request: NextRequest) {
@@ -196,8 +215,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { method, params, id } = body;
 
-    const pool = (prisma as any).$connect;
-
     try {
       if (method === "tools/list") {
         const result = await handleListTools();
@@ -206,22 +223,19 @@ export async function POST(request: NextRequest) {
       } else if (method === "tools/call") {
         const { name, arguments: args = {} } = params || {};
 
-        // Use Prisma transaction for queries
-        const prismaClient = prisma.$defaultClient as any;
-
         let result: string;
         switch (name) {
           case "search_documents":
-            result = await handleSearch(prismaClient, args.query || '', args.limit || 10);
+            result = await handleSearchDocuments(args.query || '', args.limit || 10);
             break;
           case "get_document":
-            result = await handleGetDocument(prismaClient, args.id || '');
+            result = await handleGetDocument(args.id || '');
             break;
           case "list_categories":
-            result = await handleListCategories(prismaClient);
+            result = await handleListCategories();
             break;
           case "get_summary":
-            result = await handleGetSummary(prismaClient, args.id || '');
+            result = await handleGetSummary(args.id || '');
             break;
           default:
             return NextResponse.json({
