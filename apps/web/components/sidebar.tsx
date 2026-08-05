@@ -38,7 +38,7 @@ export function Sidebar({ session }: { session: Session }) {
       flexDirection: 'column',
     }}>
       <div style={{
-        padding: '11px 16px',
+        height: '56px',
         background: 'var(--color-text-dark)',
         boxShadow: '0 2px 4px rgba(30, 41, 59, 0.15)',
         borderBottom: '1px solid var(--color-text-dark)',
