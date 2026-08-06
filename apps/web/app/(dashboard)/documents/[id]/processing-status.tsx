@@ -6,19 +6,17 @@ import { trpc } from '@/lib/trpc/client';
 type Props = {
   documentId: string;
   initialHasSummary: boolean;
-  initialHasFlowchart: boolean;
-  initialHasCitations: boolean;
-  onUpdate: (s: { hasSummary: boolean; hasFlowchart: boolean; hasCitations: boolean }) => void;
+  initialHasOutline: boolean;
+  onUpdate: (s: { hasSummary: boolean; hasOutline: boolean }) => void;
 };
 
 export function ProcessingStatus({
   documentId,
   initialHasSummary,
-  initialHasFlowchart,
-  initialHasCitations,
+  initialHasOutline,
   onUpdate,
 }: Props) {
-  const isProcessing = !initialHasSummary || !initialHasFlowchart;
+  const isProcessing = !initialHasSummary || !initialHasOutline;
 
   const { data } = trpc.documents.processingStatus.useQuery(
     { id: documentId },
@@ -33,8 +31,7 @@ export function ProcessingStatus({
     if (data) {
       onUpdate({
         hasSummary: data.hasSummary,
-        hasFlowchart: data.hasOutline,
-        hasCitations: data.citationCount > 0,
+        hasOutline: data.hasOutline,
       });
     }
   }, [data, onUpdate]);
